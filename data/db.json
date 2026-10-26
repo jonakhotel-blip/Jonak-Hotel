@@ -871,7 +871,7 @@
       ],
       "tariff": 3500,
       "originalTariff": 4200,
-      "status": "Available",
+      "status": "Sold Out",
       "capacity": "2 Adults + 1 Child",
       "bed": "2 Spacious Twin Luxury Beds",
       "size": "320 sq.ft",
@@ -892,11 +892,9 @@
         "Full Power Backup"
       ],
       "description": "Spacious twin-bedded sanctuary (Room 204) designed for business colleagues, friends, or traveling family members seeking separate premium beds with full air-conditioned comfort.",
-      "availableRoomNumbers": [
-        "204"
-      ],
+      "availableRoomNumbers": [],
       "totalRoomsCount": 1,
-      "availableRoomsCount": 1
+      "availableRoomsCount": 0
     },
     {
       "id": "twin-non-ac",
@@ -971,12 +969,11 @@
       ],
       "description": "Our most sought-after category (Rooms 201, 203, 301). Perfect for couples and business executives needing a polished, peaceful AC room near Barpeta's commercial hub.",
       "availableRoomNumbers": [
-        "201",
         "203",
         "301"
       ],
       "totalRoomsCount": 3,
-      "availableRoomsCount": 3
+      "availableRoomsCount": 2
     },
     {
       "id": "single-ac",
@@ -989,7 +986,7 @@
       ],
       "tariff": 2000,
       "originalTariff": 2400,
-      "status": "Available",
+      "status": "Sold Out",
       "capacity": "1 Adult (Solo Traveler / Executive)",
       "bed": "Plush Single Luxury Bed",
       "size": "190 sq.ft",
@@ -1010,11 +1007,9 @@
         "Generator Backup"
       ],
       "description": "Tailored specifically for solo executives, medical representatives, and lone travelers (Room 202). Compact, ultra-clean, and fully air-conditioned for a restful night.",
-      "availableRoomNumbers": [
-        "202"
-      ],
+      "availableRoomNumbers": [],
       "totalRoomsCount": 1,
-      "availableRoomsCount": 1
+      "availableRoomsCount": 0
     },
     {
       "id": "single-non-ac",
@@ -1086,7 +1081,7 @@
       "basePrice": 2500,
       "isAc": true,
       "ac": true,
-      "isAvailable": true,
+      "isAvailable": false,
       "guestName": "",
       "highlights": "Executive Deluxe Double Bed, Air-Conditioned, Work Desk, In-Room Dining, Free Wi-Fi"
     },
@@ -1102,7 +1097,7 @@
       "basePrice": 2000,
       "isAc": true,
       "ac": true,
-      "isAvailable": true,
+      "isAvailable": false,
       "guestName": "",
       "highlights": "Comfortable Single/Solo Traveler AC Room, In-Room Dining, Free Wi-Fi"
     },
@@ -1134,7 +1129,7 @@
       "basePrice": 3500,
       "isAc": true,
       "ac": true,
-      "isAvailable": true,
+      "isAvailable": false,
       "guestName": "",
       "highlights": "Spacious Twin Beds, Air-Conditioned, Ideal for Family/Friends, In-Room Dining, Free Wi-Fi"
     },
@@ -1630,5 +1625,94 @@
       "completedAt": null
     }
   ],
-  "version": 1793010363831
+  "visitors": [
+    {
+      "id": "vis_1793013590990_4kppb",
+      "timestamp": "2026-10-26T11:19:50.990Z",
+      "page": "Rooms 101-304",
+      "deviceType": "Mobile",
+      "referrer": "Direct",
+      "isReturning": false
+    }
+  ],
+  "visitorStats": {
+    "totalLifetimeVisitors": 1249,
+    "todayVisitors": 87,
+    "thisMonthVisitors": 941,
+    "lastUpdatedDate": "2026-10-26",
+    "devices": {
+      "mobile": 781,
+      "desktop": 468
+    },
+    "pageViews": {
+      "home": 1248,
+      "menu": 890,
+      "rooms": 640,
+      "events": 210,
+      "rooms 101-304": 1
+    }
+  },
+  "customers": [
+    {
+      "id": "CUST-9854123490",
+      "name": "Pranab Kalita",
+      "phone": "9854123490",
+      "address": "Barpeta District",
+      "totalOrders": 0,
+      "totalStays": 1,
+      "totalEvents": 0,
+      "totalSpend": 5998,
+      "lastVisitDate": "2026-10-26T11:19:42.055Z",
+      "customerType": "⭐ Frequent Diner"
+    },
+    {
+      "id": "CUST-9435098765",
+      "name": "Dr. Himanta Baishya",
+      "phone": "9435098765",
+      "address": "Barpeta District",
+      "totalOrders": 0,
+      "totalStays": 1,
+      "totalEvents": 0,
+      "totalSpend": 3998,
+      "lastVisitDate": "2026-10-26T11:19:42.055Z",
+      "customerType": "⭐ Frequent Diner"
+    },
+    {
+      "id": "CUST-9864012345",
+      "name": "Rituraj Das",
+      "phone": "9864012345",
+      "address": "Barpeta Town",
+      "totalOrders": 1,
+      "totalStays": 0,
+      "totalEvents": 0,
+      "totalSpend": 1140,
+      "lastVisitDate": "2026-10-26T11:19:42.055Z",
+      "customerType": "🌱 New Customer"
+    },
+    {
+      "id": "CUST-9101234567",
+      "name": "Bikash Sarma",
+      "phone": "9101234567",
+      "address": "Barpeta Town",
+      "totalOrders": 1,
+      "totalStays": 0,
+      "totalEvents": 0,
+      "totalSpend": 620,
+      "lastVisitDate": "2026-10-26T11:19:42.055Z",
+      "customerType": "🌱 New Customer"
+    },
+    {
+      "id": "CUST-7002345678",
+      "name": "Anamika Medhi",
+      "phone": "7002345678",
+      "address": "Barpeta Town",
+      "totalOrders": 1,
+      "totalStays": 0,
+      "totalEvents": 0,
+      "totalSpend": 610,
+      "lastVisitDate": "2026-10-26T11:19:42.055Z",
+      "customerType": "🌱 New Customer"
+    }
+  ],
+  "version": 1793011325403
 }
