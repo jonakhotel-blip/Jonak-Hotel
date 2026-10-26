@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useHotel } from '../context/HotelContext';
-import { getDishImage } from '../data/seedData';
+import { getDishImage, DISH_SPECIFIC_IMAGES } from '../data/seedData';
 import { 
   Search, 
   Plus, 
@@ -355,7 +355,7 @@ export const MenuSection = ({ onOpenCart }) => {
                       background: 'linear-gradient(135deg, #0E1626 0%, #172338 100%)'
                     }}>
                       <img 
-                        src={dish.image || getDishImage(dish.category, dish.name)} 
+                        src={DISH_SPECIFIC_IMAGES?.[dish.id] || dish.image || getDishImage(dish.category, dish.name)} 
                         alt={dish.name}
                         loading="lazy"
                         style={{

@@ -22,7 +22,8 @@ import {
   INITIAL_RAW_INVENTORY,
   INITIAL_EXPENSES,
   INITIAL_TASKS,
-  STAFF_ROLES
+  STAFF_ROLES,
+  DISH_SPECIFIC_IMAGES
 } from './src/data/seedData.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -314,8 +315,13 @@ const loadData = () => {
         ...r
       }));
 
+      const loadedMenu = (Array.isArray(parsed.menu) && parsed.menu.length > 0 ? parsed.menu : INITIAL_MENU).map(d => ({
+        ...d,
+        image: DISH_SPECIFIC_IMAGES?.[d.id] || d.image || '/images/food/biryani.jpg'
+      }));
+
       db = {
-        menu: Array.isArray(parsed.menu) && parsed.menu.length > 0 ? parsed.menu : INITIAL_MENU,
+        menu: loadedMenu,
         rooms: isOldRoomData ? INITIAL_ROOMS : (Array.isArray(parsed.rooms) ? parsed.rooms : INITIAL_ROOMS),
         physicalRooms: loadedPhysicalRooms,
         settings: { ...INITIAL_SETTINGS, ...(parsed.settings || {}) },

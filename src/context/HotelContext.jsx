@@ -15,26 +15,43 @@ import {
   INITIAL_RAW_INVENTORY,
   INITIAL_EXPENSES,
   INITIAL_TASKS,
-  STAFF_ROLES
+  STAFF_ROLES,
+  DISH_SPECIFIC_IMAGES,
+  getDishImage
 } from '../data/seedData';
 
 const HotelContext = createContext();
 
+// Clean up legacy stale demo data from browser localStorage
+try {
+  ['jonak_orders_v1', 'jonak_bookings_v1', 'jonak_menu_v1', 'jonak_customers_v1'].forEach(k => {
+    localStorage.removeItem(k);
+  });
+} catch (_) {}
+
 const STORAGE_KEYS = {
-  MENU: 'jonak_menu_v1',
-  ROOMS: 'jonak_rooms_v1',
-  PHYSICAL_ROOMS: 'jonak_physical_rooms_v1',
-  SETTINGS: 'jonak_settings_v1',
-  ORDERS: 'jonak_orders_v1',
-  BOOKINGS: 'jonak_bookings_v1',
-  EVENTS: 'jonak_events_v1',
-  CART: 'jonak_cart_v1',
+  MENU: 'jonak_menu_v2',
+  ROOMS: 'jonak_rooms_v2',
+  PHYSICAL_ROOMS: 'jonak_physical_rooms_v2',
+  SETTINGS: 'jonak_settings_v2',
+  ORDERS: 'jonak_orders_v2',
+  BOOKINGS: 'jonak_bookings_v2',
+  EVENTS: 'jonak_events_v2',
+  CART: 'jonak_cart_v2',
   ADMIN_TOKEN: 'jonak_admin_token_v1',
-  STAFF: 'jonak_staff_v1',
-  INVENTORY: 'jonak_inventory_v1',
-  EXPENSES: 'jonak_expenses_v1',
-  TASKS: 'jonak_tasks_v1',
+  STAFF: 'jonak_staff_v2',
+  INVENTORY: 'jonak_inventory_v2',
+  EXPENSES: 'jonak_expenses_v2',
+  TASKS: 'jonak_tasks_v2',
   STAFF_SESSION: 'jonak_staff_session_v1'
+};
+
+const enrichMenu = (items) => {
+  if (!Array.isArray(items)) return INITIAL_MENU;
+  return items.map(d => ({
+    ...d,
+    image: DISH_SPECIFIC_IMAGES?.[d.id] || d.image || getDishImage(d.category, d.name)
+  }));
 };
 
 // Play audio alert function for hotel owner when a new order/booking arrives
@@ -69,7 +86,7 @@ export const HotelProvider = ({ children }) => {
   const [menu, setMenu] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.MENU);
-      return saved ? JSON.parse(saved) : INITIAL_MENU;
+      return saved ? enrichMenu(JSON.parse(saved)) : INITIAL_MENU;
     } catch {
       return INITIAL_MENU;
     }
@@ -281,7 +298,7 @@ export const HotelProvider = ({ children }) => {
       if (!res.ok) return;
 
       const data = await res.json();
-      if (data.menu) setMenu(data.menu);
+      if (data.menu) setMenu(enrichMenu(data.menu));
       if (data.rooms) setRooms(data.rooms);
       if (data.physicalRooms) setPhysicalRooms(data.physicalRooms);
       if (data.settings) setSettings(data.settings);
