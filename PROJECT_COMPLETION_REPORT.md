@@ -100,27 +100,56 @@ Admin panel (`/#admin`) me naya **"Room & Table QR Codes"** tab:
 
 ---
 
-## 7. AWS EC2 Production Deployment Bundle
+## 7. The Jonak Story, Brand Heritage & Hotel Leadership Section
+
+Customer trust aur emotional connection boost karne ke liye **"Our Story & Hotel Leadership"** (`AboutSection.jsx`) launch kiya gaya:
+- **Heritage & Story:** "Jonak" (Assamese: জোনাক - Moonlight) ki kahani — BH Road, Barpeta me travellers, pilgrims (Barpeta Satra), aur FAAMCH patients ke families ke liye home away from home.
+- **Real Photo Showcase:** Hotel entrance aur restaurant collage with "Assam Tourism Certified" trust seal.
+- **Live Metric Counters:** 
+  - 🏰 **9 Luxury AC & Non-AC Rooms**
+  - 🍲 **82+ Authentic Menu Dishes**
+  - 🛵 **5 KM 100% Free Food Delivery**
+- **Founder & Leadership Message:** *"Your Comfort, Dignity & Delight Are Our Sacred Duty"* quote card with direct reception contacts (`+91 96785 82286`, `jonakhotel@gmail.com`).
+- **The Four Pillars of Excellence:** 9 Physical Rooms, Authentic Kitchen & Dum Biryani, Form C & e-KYC Compliant, Open Stage & Galas.
+- **Integrated Navigation:** Navbar (Desktop & Mobile Drawer), Footer, aur `App.jsx` page flow me seamlessly linked.
+
+---
+
+## 8. Git Version Control & Deployment Readiness
+
+- **Local Git Repository:** Initialized on `master` branch.
+  - Commits clean and staged:
+    1. `a882c63` — Complete real-time production release with official 9 rooms, Paytm UPI payment, and guest e-KYC.
+    2. `5783484` — Luxury About Us and Hotel Leadership section with real counters, mission quote and four pillars.
+- **GitHub Ready:** Jab aap return honge, hum 1 command me aapke GitHub account pe repo push kar sakte hain (`git remote add origin ... && git push -u origin master`).
+
+---
+
+## 9. AWS EC2 Production Deployment Bundle
 
 Server ko Ubuntu AWS EC2 par deploy karne ke liye ready files:
 1. **`ecosystem.config.cjs`**: PM2 process manager config (auto-restart on crash, memory limit 800M).
 2. **`nginx-jonakhotelgroup.conf`**: Nginx reverse proxy config (gzip, SSE `proxy_buffering off;`, 1-year asset cache, Certbot ready).
 3. **`deploy-aws.sh`**: 1-click bash script jo Node.js 20 LTS, Nginx, build, aur PM2 ko setup karta hai.
-4. **Build Status:** `npm run build` test kiya gaya — **100% Pass (0 Errors)**.
+4. **Build Status:** `npm run build` test kiya gaya — **100% Pass (0 Errors)** in 4.24s.
 
 ---
 
-## 8. Summary of All Completed Files
+## 10. Summary of All Completed Files
 
 | File Path | Description |
 | :--- | :--- |
+| `src/components/AboutSection.jsx` | Heritage story, owner message, live counters, 4 pillars of excellence |
 | `src/data/seedData.js` | 9 official physical rooms, 82 menu dishes, 5 KM delivery landmarks, Paytm UPI credentials |
 | `src/components/BookingModal.jsx` | 5% GST calculation, e-KYC Aadhaar form, camera photo upload, Paytm UPI payment |
 | `src/components/CartDrawer.jsx` | 9-room in-room dining, Haversine GPS delivery, Paytm UPI QR card, 1-tap mobile pay, UTR input |
 | `src/components/RoomsSection.jsx` | 6 category cards, base tariffs + 5% GST, dynamic physical room availability badge |
+| `src/components/Navbar.jsx` | Sticky luxury nav, announcement banner, cart counter, mobile drawer, About Us link |
+| `src/components/Footer.jsx` | Royal dark footer, Google 4.2★ badge, quick navigation, WhatsApp CTA |
 | `src/components/AdminPanel.jsx` | Floor-wise room grid, QR generator, e-KYC proof modal, Paytm QR download, secured PIN login |
 | `server.js` | Full-stack Express server, SSE live sync, atomic file storage, protected REST endpoints |
 | `public/images/jonak-paytm-qr.png` | Official Paytm UPI QR Code image |
 | `ecosystem.config.cjs` | PM2 production process configuration |
 | `nginx-jonakhotelgroup.conf` | Production Nginx reverse proxy configuration |
 | `deploy-aws.sh` | 1-Click Ubuntu EC2 automated deployment script |
+
