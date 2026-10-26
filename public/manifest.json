@@ -1,0 +1,25 @@
+{
+  "name": "Jonak Hotel & Restaurant Barpeta",
+  "short_name": "Jonak Hotel",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#070B14",
+  "theme_color": "#D4AF37",
+  "description": "Barpeta's #1 Rated Luxury Hotel & Family Restaurant. 100% Free Food Delivery within 5 KM, AC Rooms & Banquet.",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/jonak.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/jonak.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["food", "travel", "lifestyle"]
+}

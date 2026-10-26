@@ -1627,6 +1627,38 @@
   ],
   "visitors": [
     {
+      "id": "vis_1793018765403_nuaml",
+      "timestamp": "2026-10-26T12:46:05.403Z",
+      "page": "MENU",
+      "deviceType": "Desktop",
+      "referrer": "http://localhost:3000/",
+      "isReturning": true
+    },
+    {
+      "id": "vis_1793018765374_hbfmz",
+      "timestamp": "2026-10-26T12:46:05.374Z",
+      "page": "MENU",
+      "deviceType": "Desktop",
+      "referrer": "http://localhost:3000/",
+      "isReturning": true
+    },
+    {
+      "id": "vis_1793018757437_4phs2",
+      "timestamp": "2026-10-26T12:45:57.437Z",
+      "page": "MENU",
+      "deviceType": "Desktop",
+      "referrer": "http://localhost:3000/",
+      "isReturning": true
+    },
+    {
+      "id": "vis_1793018757419_6p3pi",
+      "timestamp": "2026-10-26T12:45:57.421Z",
+      "page": "MENU",
+      "deviceType": "Desktop",
+      "referrer": "http://localhost:3000/",
+      "isReturning": true
+    },
+    {
       "id": "vis_1793016351928_kqauw",
       "timestamp": "2026-10-26T12:05:51.928Z",
       "page": "MENU",
@@ -1668,17 +1700,17 @@
     }
   ],
   "visitorStats": {
-    "totalLifetimeVisitors": 1253,
-    "todayVisitors": 91,
-    "thisMonthVisitors": 945,
+    "totalLifetimeVisitors": 1257,
+    "todayVisitors": 95,
+    "thisMonthVisitors": 949,
     "lastUpdatedDate": "2026-10-26",
     "devices": {
       "mobile": 781,
-      "desktop": 472
+      "desktop": 476
     },
     "pageViews": {
       "home": 1248,
-      "menu": 892,
+      "menu": 896,
       "rooms": 640,
       "events": 210,
       "rooms 101-304": 1,
@@ -1695,7 +1727,7 @@
       "totalStays": 1,
       "totalEvents": 0,
       "totalSpend": 5998,
-      "lastVisitDate": "2026-10-26T12:05:46.867Z",
+      "lastVisitDate": "2026-10-26T12:45:58.104Z",
       "customerType": "⭐ Frequent Diner"
     },
     {
@@ -1707,7 +1739,7 @@
       "totalStays": 1,
       "totalEvents": 0,
       "totalSpend": 3998,
-      "lastVisitDate": "2026-10-26T12:05:46.867Z",
+      "lastVisitDate": "2026-10-26T12:45:58.104Z",
       "customerType": "⭐ Frequent Diner"
     },
     {
@@ -1719,7 +1751,7 @@
       "totalStays": 0,
       "totalEvents": 0,
       "totalSpend": 1140,
-      "lastVisitDate": "2026-10-26T12:05:46.867Z",
+      "lastVisitDate": "2026-10-26T12:45:58.104Z",
       "customerType": "🌱 New Customer"
     },
     {
@@ -1731,7 +1763,7 @@
       "totalStays": 0,
       "totalEvents": 0,
       "totalSpend": 620,
-      "lastVisitDate": "2026-10-26T12:05:46.867Z",
+      "lastVisitDate": "2026-10-26T12:45:58.104Z",
       "customerType": "🌱 New Customer"
     },
     {
@@ -1743,7 +1775,7 @@
       "totalStays": 0,
       "totalEvents": 0,
       "totalSpend": 610,
-      "lastVisitDate": "2026-10-26T12:05:46.867Z",
+      "lastVisitDate": "2026-10-26T12:45:58.104Z",
       "customerType": "🌱 New Customer"
     }
   ],
