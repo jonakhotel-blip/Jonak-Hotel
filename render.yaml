@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: jonak-hotel-server
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm install && npm run build
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: ADMIN_PIN
+        value: 1234
