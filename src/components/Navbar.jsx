@@ -11,7 +11,8 @@ import {
   BellRing,
   Utensils,
   BedDouble,
-  Sparkles
+  Sparkles,
+  HeartHandshake
 } from 'lucide-react';
 
 export const Navbar = ({ onOpenCart, onOpenAdmin, activeView, setActiveView }) => {
@@ -153,6 +154,15 @@ export const Navbar = ({ onOpenCart, onOpenAdmin, activeView, setActiveView }) =
               onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
             >
               Barpeta Guide
+            </a>
+            <a 
+              href="#about" 
+              onClick={() => setActiveView('home')}
+              style={{ color: 'var(--text-secondary)', textDecoration: 'none', transition: 'color 0.2s' }}
+              onMouseEnter={(e) => e.target.style.color = 'var(--gold-light)'}
+              onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
+            >
+              Our Story
             </a>
             <a 
               href="#faq" 
@@ -330,6 +340,15 @@ export const Navbar = ({ onOpenCart, onOpenAdmin, activeView, setActiveView }) =
             >
               <MapPin size={18} color="var(--gold-primary)" />
               <span>Nearby Landmarks (Barpeta Satra, FAAMCH)</span>
+            </a>
+
+            <a 
+              href="#about" 
+              onClick={() => { setActiveView('home'); setMobileMenuOpen(false); }}
+              style={{ color: 'var(--text-primary)', textDecoration: 'none', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.6rem' }}
+            >
+              <HeartHandshake size={18} color="var(--gold-primary)" />
+              <span>Our Story & Hotel Leadership</span>
             </a>
 
             <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>

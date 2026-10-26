@@ -6,6 +6,7 @@ import { MenuSection } from './components/MenuSection';
 import { RoomsSection } from './components/RoomsSection';
 import { EventsSection } from './components/EventsSection';
 import { LandmarksSection } from './components/LandmarksSection';
+import { AboutSection } from './components/AboutSection';
 import { FAQSection } from './components/FAQSection';
 import { Footer } from './components/Footer';
 import { CartDrawer } from './components/CartDrawer';
@@ -78,6 +79,9 @@ export function App() {
 
           {/* Events & Open Stage Celebrations */}
           <EventsSection />
+
+          {/* About Us, Founder's Philosophy & Four Pillars */}
+          <AboutSection />
 
           {/* Nearby Landmarks Distance Guide */}
           <LandmarksSection />

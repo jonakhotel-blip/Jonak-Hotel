@@ -121,6 +121,11 @@ export const Footer = ({ onOpenAdmin, setActiveView }) => {
                 </a>
               </li>
               <li>
+                <a href="#about" onClick={() => setActiveView('home')} style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>
+                  Our Story & Hotel Leadership
+                </a>
+              </li>
+              <li>
                 <a href="/menu.pdf" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--gold-warm)', textDecoration: 'none' }}>
                   Download Menu (PDF)
                 </a>
