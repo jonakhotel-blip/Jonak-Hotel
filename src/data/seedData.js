@@ -64,6 +64,7 @@ export const OFFICIAL_PHYSICAL_ROOMS = [
     isAc: true, 
     ac: true,
     isAvailable: true, 
+    cleaningStatus: "Clean & Ready",
     guestName: "",
     highlights: "Luxury Presidential Suite, Air-Conditioned, Premium Amenities, In-Room Dining, Free Wi-Fi & Parking"
   },
@@ -81,6 +82,7 @@ export const OFFICIAL_PHYSICAL_ROOMS = [
     isAc: true, 
     ac: true,
     isAvailable: true, 
+    cleaningStatus: "Clean & Ready",
     guestName: "",
     highlights: "Executive Deluxe Double Bed, Air-Conditioned, Work Desk, In-Room Dining, Free Wi-Fi"
   },
@@ -96,6 +98,7 @@ export const OFFICIAL_PHYSICAL_ROOMS = [
     isAc: true, 
     ac: true,
     isAvailable: true, 
+    cleaningStatus: "Clean & Ready",
     guestName: "",
     highlights: "Comfortable Single/Solo Traveler AC Room, In-Room Dining, Free Wi-Fi"
   },
@@ -111,6 +114,7 @@ export const OFFICIAL_PHYSICAL_ROOMS = [
     isAc: true, 
     ac: true,
     isAvailable: true, 
+    cleaningStatus: "Clean & Ready",
     guestName: "",
     highlights: "Executive Deluxe Double Bed, Air-Conditioned, Work Desk, In-Room Dining, Free Wi-Fi"
   },
@@ -126,6 +130,7 @@ export const OFFICIAL_PHYSICAL_ROOMS = [
     isAc: true, 
     ac: true,
     isAvailable: true, 
+    cleaningStatus: "Dirty / Needs Cleaning",
     guestName: "",
     highlights: "Spacious Twin Beds, Air-Conditioned, Ideal for Family/Friends, In-Room Dining, Free Wi-Fi"
   },
@@ -143,6 +148,7 @@ export const OFFICIAL_PHYSICAL_ROOMS = [
     isAc: true, 
     ac: true,
     isAvailable: true, 
+    cleaningStatus: "Clean & Ready",
     guestName: "",
     highlights: "Executive Deluxe Double Bed, Air-Conditioned, Work Desk, In-Room Dining, Free Wi-Fi"
   },
@@ -158,6 +164,7 @@ export const OFFICIAL_PHYSICAL_ROOMS = [
     isAc: false, 
     ac: false,
     isAvailable: true, 
+    cleaningStatus: "Clean & Ready",
     guestName: "",
     highlights: "Budget-Friendly Non-A/C Single Room, Clean & Comfortable, In-Room Dining, Free Wi-Fi"
   },
@@ -173,6 +180,7 @@ export const OFFICIAL_PHYSICAL_ROOMS = [
     isAc: false, 
     ac: false,
     isAvailable: true, 
+    cleaningStatus: "Cleaning in Progress",
     guestName: "",
     highlights: "Spacious Twin Beds, Non-A/C Well-Ventilated Room, In-Room Dining, Free Wi-Fi"
   },
@@ -188,6 +196,7 @@ export const OFFICIAL_PHYSICAL_ROOMS = [
     isAc: false, 
     ac: false,
     isAvailable: true, 
+    cleaningStatus: "Clean & Ready",
     guestName: "",
     highlights: "Budget-Friendly Non-A/C Single Room, Clean & Comfortable, In-Room Dining, Free Wi-Fi"
   }
@@ -1371,5 +1380,357 @@ export const SAMPLE_ROOM_BOOKINGS = [
     guestCity: "Guwahati, Assam",
     aadhaarFront: null,
     aadhaarBack: null
+  }
+];
+
+// ----------------------------------------------------------------------------
+// ERP SUITE: MULTI-ROLE STAFF ECOSYSTEM & PERMISSIONS
+// ----------------------------------------------------------------------------
+export const STAFF_ROLES = {
+  owner: {
+    id: "owner",
+    title: "Super Admin / Hotel Owner",
+    defaultPin: "1234",
+    badge: "👑 Owner",
+    color: "#D4AF37",
+    description: "Complete master control over revenue graphs, profit/loss, staff roster, store inventory, room rates, and hotel settings."
+  },
+  reception: {
+    id: "reception",
+    title: "Front Desk & Receptionist",
+    defaultPin: "2222",
+    badge: "🛎️ Front Desk",
+    color: "#00BAF2",
+    description: "Guest check-in/out, physical room grid, guest Aadhaar ID verification, police Form C printing, and walk-in billing."
+  },
+  kitchen: {
+    id: "kitchen",
+    title: "Head Chef & Store Manager",
+    defaultPin: "3333",
+    badge: "👨‍🍳 Kitchen & Store",
+    color: "#FF9900",
+    description: "Live Kitchen Display System (KDS), dish out-of-stock switcher, raw food ingredients tracker, and cooking gas updates."
+  },
+  delivery: {
+    id: "delivery",
+    title: "Delivery Partner & Waiter",
+    defaultPin: "4444",
+    badge: "🛵 Delivery & Service",
+    color: "#10B981",
+    description: "Ready food orders, 5 KM Google Maps navigation, 1-tap delivery confirmation, and cash/UPI collection tracker."
+  },
+  housekeeping: {
+    id: "housekeeping",
+    title: "Housekeeping & Room Care",
+    defaultPin: "5555",
+    badge: "🧹 Housekeeping",
+    color: "#A855F7",
+    description: "Live 9 physical rooms cleaning dashboard (Dirty/Checkout -> Cleaning in Progress -> Clean & Ready for Guest)."
+  }
+};
+
+export const DEFAULT_STAFF_MEMBERS = [
+  {
+    id: "STF-101",
+    name: "Bishnu Choudhury",
+    role: "owner",
+    roleTitle: "Super Admin / Hotel Owner",
+    pin: "1234",
+    phone: "+91 96785 82286",
+    status: "On Duty",
+    shift: "All Day",
+    joinedDate: "2024-01-01"
+  },
+  {
+    id: "STF-102",
+    name: "Biki Sharma",
+    role: "reception",
+    roleTitle: "Front Desk Executive",
+    pin: "2222",
+    phone: "+91 98540 11223",
+    status: "On Duty",
+    shift: "Morning (8 AM - 4 PM)",
+    joinedDate: "2024-03-15"
+  },
+  {
+    id: "STF-103",
+    name: "Chef Ratan Das",
+    role: "kitchen",
+    roleTitle: "Head Master Chef",
+    pin: "3333",
+    phone: "+91 94350 33445",
+    status: "On Duty",
+    shift: "Full Shift (10 AM - 10 PM)",
+    joinedDate: "2024-02-10"
+  },
+  {
+    id: "STF-104",
+    name: "Monojit Roy",
+    role: "delivery",
+    roleTitle: "Fast Delivery Captain",
+    pin: "4444",
+    phone: "+91 88760 55667",
+    status: "On Duty",
+    shift: "Day & Evening (11 AM - 9 PM)",
+    joinedDate: "2024-05-01"
+  },
+  {
+    id: "STF-105",
+    name: "Rahul Barman",
+    role: "housekeeping",
+    roleTitle: "Housekeeping Supervisor",
+    pin: "5555",
+    phone: "+91 91010 77889",
+    status: "On Duty",
+    shift: "Morning (7 AM - 3 PM)",
+    joinedDate: "2024-04-12"
+  }
+];
+
+// ----------------------------------------------------------------------------
+// ERP SUITE: KITCHEN RAW MATERIAL & STORE INVENTORY
+// ----------------------------------------------------------------------------
+export const INITIAL_RAW_INVENTORY = [
+  {
+    id: "INV-101",
+    name: "Fresh Broiler & Local Chicken",
+    category: "Meat & Poultry",
+    unit: "kg",
+    currentStock: 18.5,
+    minThreshold: 5.0,
+    costPerUnit: 220,
+    lastUpdated: "Today, 10:30 AM",
+    updatedBy: "Chef Ratan Das"
+  },
+  {
+    id: "INV-102",
+    name: "Tender Fresh Mutton (Goat)",
+    category: "Meat & Poultry",
+    unit: "kg",
+    currentStock: 8.0,
+    minThreshold: 3.0,
+    costPerUnit: 750,
+    lastUpdated: "Today, 09:15 AM",
+    updatedBy: "Chef Ratan Das"
+  },
+  {
+    id: "INV-103",
+    name: "Fresh Local Fish (Rohu/Bhakua)",
+    category: "Meat & Poultry",
+    unit: "kg",
+    currentStock: 12.0,
+    minThreshold: 4.0,
+    costPerUnit: 280,
+    lastUpdated: "Today, 08:45 AM",
+    updatedBy: "Chef Ratan Das"
+  },
+  {
+    id: "INV-104",
+    name: "Fresh Malai Paneer",
+    category: "Dairy & Cheese",
+    unit: "kg",
+    currentStock: 9.5,
+    minThreshold: 3.0,
+    costPerUnit: 360,
+    lastUpdated: "Today, 11:00 AM",
+    updatedBy: "Chef Ratan Das"
+  },
+  {
+    id: "INV-105",
+    name: "Aged Basmati Biryani Rice",
+    category: "Grains & Staples",
+    unit: "kg",
+    currentStock: 45.0,
+    minThreshold: 15.0,
+    costPerUnit: 95,
+    lastUpdated: "Yesterday, 05:00 PM",
+    updatedBy: "Chef Ratan Das"
+  },
+  {
+    id: "INV-106",
+    name: "Refined & Mustard Cooking Oil",
+    category: "Oils & Spices",
+    unit: "Liters",
+    currentStock: 32.0,
+    minThreshold: 10.0,
+    costPerUnit: 140,
+    lastUpdated: "Today, 09:30 AM",
+    updatedBy: "Chef Ratan Das"
+  },
+  {
+    id: "INV-107",
+    name: "Commercial LPG Gas 19kg Cylinders",
+    category: "Fuel & Energy",
+    unit: "Cylinders",
+    currentStock: 3,
+    minThreshold: 2,
+    costPerUnit: 1850,
+    lastUpdated: "Today, 07:00 AM",
+    updatedBy: "Biki Sharma"
+  },
+  {
+    id: "INV-108",
+    name: "Momo & Roll Flour (Maida)",
+    category: "Grains & Staples",
+    unit: "kg",
+    currentStock: 28.0,
+    minThreshold: 8.0,
+    costPerUnit: 42,
+    lastUpdated: "Today, 10:15 AM",
+    updatedBy: "Chef Ratan Das"
+  },
+  {
+    id: "INV-109",
+    name: "Soft Drinks & Packaged Mineral Water",
+    category: "Beverages",
+    unit: "Crates",
+    currentStock: 8,
+    minThreshold: 3,
+    costPerUnit: 480,
+    lastUpdated: "Today, 11:45 AM",
+    updatedBy: "Monojit Roy"
+  },
+  {
+    id: "INV-110",
+    name: "Hotel Toiletries & Fresh Linen Sets",
+    category: "Housekeeping",
+    unit: "Sets",
+    currentStock: 26,
+    minThreshold: 10,
+    costPerUnit: 120,
+    lastUpdated: "Today, 08:00 AM",
+    updatedBy: "Rahul Barman"
+  }
+];
+
+// ----------------------------------------------------------------------------
+// ERP SUITE: OPERATIONAL EXPENSES LOG
+// ----------------------------------------------------------------------------
+export const INITIAL_EXPENSES = [
+  {
+    id: "EXP-101",
+    date: "2026-10-26",
+    item: "Fresh Chicken Wholesale Purchase (20 kg)",
+    category: "Kitchen Raw Stock",
+    amount: 4400,
+    paidVia: "Cash",
+    loggedBy: "Chef Ratan Das",
+    time: "10:30 AM"
+  },
+  {
+    id: "EXP-102",
+    date: "2026-10-26",
+    item: "Commercial LPG Cylinder Refill (2 Nos)",
+    category: "Utilities & Gas",
+    amount: 3700,
+    paidVia: "Paytm UPI",
+    loggedBy: "Biki Sharma",
+    time: "07:30 AM"
+  },
+  {
+    id: "EXP-103",
+    date: "2026-10-25",
+    item: "Aged Basmati Rice (50 kg Bag)",
+    category: "Kitchen Raw Stock",
+    amount: 4750,
+    paidVia: "Paytm UPI",
+    loggedBy: "Bishnu Choudhury",
+    time: "04:15 PM"
+  },
+  {
+    id: "EXP-104",
+    date: "2026-10-25",
+    item: "Room Linens & Toiletries Refill",
+    category: "Housekeeping",
+    amount: 2400,
+    paidVia: "Cash",
+    loggedBy: "Rahul Barman",
+    time: "11:20 AM"
+  }
+];
+
+// ----------------------------------------------------------------------------
+// ERP SUITE: DAILY OPERATIONAL TASKS & CHECKLIST
+// ----------------------------------------------------------------------------
+export const INITIAL_TASKS = [
+  {
+    id: "TSK-101",
+    title: "Morning Kitchen Prep & Fresh Curry Gravy Base",
+    assignedRole: "kitchen",
+    time: "07:30 AM",
+    priority: "High",
+    completed: true,
+    completedBy: "Chef Ratan Das",
+    completedAt: "Today, 08:15 AM"
+  },
+  {
+    id: "TSK-102",
+    title: "Inspect Generator Diesel Level & Main Power Backup",
+    assignedRole: "reception",
+    time: "08:00 AM",
+    priority: "High",
+    completed: true,
+    completedBy: "Biki Sharma",
+    completedAt: "Today, 08:30 AM"
+  },
+  {
+    id: "TSK-103",
+    title: "Sanitize & Linen change for Room 101 Suite & 201 Deluxe",
+    assignedRole: "housekeeping",
+    time: "09:30 AM",
+    priority: "High",
+    completed: true,
+    completedBy: "Rahul Barman",
+    completedAt: "Today, 10:45 AM"
+  },
+  {
+    id: "TSK-104",
+    title: "Verify Free 5 KM Delivery Bike fuel & thermal bags",
+    assignedRole: "delivery",
+    time: "11:00 AM",
+    priority: "Medium",
+    completed: true,
+    completedBy: "Monojit Roy",
+    completedAt: "Today, 11:20 AM"
+  },
+  {
+    id: "TSK-105",
+    title: "Guest e-KYC Verification & Police Form C Record Matching",
+    assignedRole: "reception",
+    time: "02:00 PM",
+    priority: "High",
+    completed: false,
+    completedBy: null,
+    completedAt: null
+  },
+  {
+    id: "TSK-106",
+    title: "Evening Tandoor & Kebabs Raw Stock Assessment",
+    assignedRole: "kitchen",
+    time: "05:00 PM",
+    priority: "Medium",
+    completed: false,
+    completedBy: null,
+    completedAt: null
+  },
+  {
+    id: "TSK-107",
+    title: "Clean Open Stage & Banquet Garden for Evening Bookings",
+    assignedRole: "housekeeping",
+    time: "05:30 PM",
+    priority: "Medium",
+    completed: false,
+    completedBy: null,
+    completedAt: null
+  },
+  {
+    id: "TSK-108",
+    title: "Night Cash Drawer & Paytm UPI Reconciliation (Z-Report)",
+    assignedRole: "reception",
+    time: "10:30 PM",
+    priority: "High",
+    completed: false,
+    completedBy: null,
+    completedAt: null
   }
 ];

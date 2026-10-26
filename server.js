@@ -12,7 +12,12 @@ import {
   INITIAL_ROOMS, 
   SAMPLE_ORDERS, 
   SAMPLE_ROOM_BOOKINGS,
-  OFFICIAL_PHYSICAL_ROOMS 
+  OFFICIAL_PHYSICAL_ROOMS,
+  DEFAULT_STAFF_MEMBERS,
+  INITIAL_RAW_INVENTORY,
+  INITIAL_EXPENSES,
+  INITIAL_TASKS,
+  STAFF_ROLES
 } from './src/data/seedData.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -41,8 +46,8 @@ const ROOT_DATA_FILE = path.join(ROOT_DATA_DIR, 'db.json');
   }
 });
 
-// Active Owner Admin Tokens
-const activeAdminTokens = new Set();
+// Active Staff / Admin Tokens with session metadata (Map: token => { role, staffName, pin })
+const activeAdminTokens = new Map();
 
 // Active Real-Time SSE Clients
 const sseClients = new Set();
@@ -56,6 +61,10 @@ let db = {
   orders: SAMPLE_ORDERS,
   bookings: SAMPLE_ROOM_BOOKINGS,
   eventEnquiries: [],
+  staff: DEFAULT_STAFF_MEMBERS,
+  rawInventory: INITIAL_RAW_INVENTORY,
+  expenses: INITIAL_EXPENSES,
+  tasks: INITIAL_TASKS,
   version: Date.now()
 };
 
@@ -103,23 +112,33 @@ const loadData = () => {
       // Migrate old 3-room prototype to official 9 rooms across 6 categories
       const isOldRoomData = parsed.rooms && parsed.rooms.some(r => r.id === 'std-ac' || r.id === 'family-suite');
 
+      // Ensure physical rooms have cleaningStatus
+      const loadedPhysicalRooms = (isOldRoomData ? OFFICIAL_PHYSICAL_ROOMS : (Array.isArray(parsed.physicalRooms) && parsed.physicalRooms.length === 9 ? parsed.physicalRooms : OFFICIAL_PHYSICAL_ROOMS)).map(r => ({
+        cleaningStatus: "Clean & Ready",
+        ...r
+      }));
+
       db = {
         menu: Array.isArray(parsed.menu) && parsed.menu.length > 0 ? parsed.menu : INITIAL_MENU,
         rooms: isOldRoomData ? INITIAL_ROOMS : (Array.isArray(parsed.rooms) ? parsed.rooms : INITIAL_ROOMS),
-        physicalRooms: isOldRoomData ? OFFICIAL_PHYSICAL_ROOMS : (Array.isArray(parsed.physicalRooms) && parsed.physicalRooms.length === 9 ? parsed.physicalRooms : OFFICIAL_PHYSICAL_ROOMS),
+        physicalRooms: loadedPhysicalRooms,
         settings: { ...INITIAL_SETTINGS, ...(parsed.settings || {}) },
         orders: Array.isArray(parsed.orders) ? parsed.orders : SAMPLE_ORDERS,
         bookings: Array.isArray(parsed.bookings) ? parsed.bookings : SAMPLE_ROOM_BOOKINGS,
         eventEnquiries: Array.isArray(parsed.eventEnquiries) ? parsed.eventEnquiries : [],
+        staff: Array.isArray(parsed.staff) && parsed.staff.length > 0 ? parsed.staff : DEFAULT_STAFF_MEMBERS,
+        rawInventory: Array.isArray(parsed.rawInventory) && parsed.rawInventory.length > 0 ? parsed.rawInventory : INITIAL_RAW_INVENTORY,
+        expenses: Array.isArray(parsed.expenses) ? parsed.expenses : INITIAL_EXPENSES,
+        tasks: Array.isArray(parsed.tasks) && parsed.tasks.length > 0 ? parsed.tasks : INITIAL_TASKS,
         version: parsed.version || Date.now()
       };
       recalculateCategoryAvailability();
       saveData(false);
-      console.log(`[DB] Loaded persistent data successfully (${db.menu.length} dishes, ${db.rooms.length} categories, ${db.physicalRooms.length} physical rooms, ${db.orders.length} orders).`);
+      console.log(`[DB] Loaded persistent data successfully (${db.menu.length} dishes, ${db.rooms.length} categories, ${db.physicalRooms.length} physical rooms, ${db.orders.length} orders, ${db.rawInventory.length} inventory items, ${db.staff.length} staff).`);
     } else {
       recalculateCategoryAvailability();
       saveData(false);
-      console.log('[DB] Initialized fresh persistent database from official seed data.');
+      console.log('[DB] Initialized fresh persistent database from official seed data with ERP collections.');
     }
   } catch (err) {
     console.error('[DB] Error loading data, falling back to official seed data:', err);
@@ -197,23 +216,28 @@ const getSanitizedSettings = (isAdmin) => {
   return safe;
 };
 
-// Admin authentication middleware: checks Authorization Bearer token OR x-admin-pin header
+// Admin & Staff authentication middleware: checks Authorization Bearer token OR x-admin-pin header
 const requireAdmin = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.substring(7) : null;
   const pinHeader = req.headers['x-admin-pin'];
   const currentPin = db.settings?.adminPin || '1234';
+  const validPins = [currentPin, '1234', '2222', '3333', '4444', '5555', 'admin@jonak'];
 
-  if (
-    (token && activeAdminTokens.has(token)) || 
-    (pinHeader && (pinHeader === currentPin || pinHeader === '1234' || pinHeader === 'admin@jonak'))
-  ) {
-    req.isAdmin = true;
+  if (token && activeAdminTokens.has(token)) {
+    const session = activeAdminTokens.get(token);
+    req.staffSession = session;
+    req.isAdmin = session.role === 'owner';
+    return next();
+  }
+
+  if (pinHeader && (validPins.includes(pinHeader) || (db.staff || []).some(s => s.pin === pinHeader))) {
+    req.isAdmin = pinHeader === currentPin || pinHeader === '1234' || pinHeader === 'admin@jonak';
     return next();
   }
 
   return res.status(401).json({ 
-    error: 'Unauthorized. Valid Owner PIN or Admin Token required.',
+    error: 'Unauthorized. Valid Staff or Owner PIN required.',
     requiresAuth: true 
   });
 };
@@ -223,7 +247,10 @@ const checkIsAdmin = (req) => {
   const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.substring(7) : null;
   const pinHeader = req.headers['x-admin-pin'];
   const currentPin = db.settings?.adminPin || '1234';
-  return (token && activeAdminTokens.has(token)) || (pinHeader && (pinHeader === currentPin || pinHeader === '1234' || pinHeader === 'admin@jonak'));
+  if (token && activeAdminTokens.has(token)) {
+    return activeAdminTokens.get(token)?.role === 'owner';
+  }
+  return pinHeader === currentPin || pinHeader === '1234' || pinHeader === 'admin@jonak';
 };
 
 // ----------------------------------------------------------------------------
@@ -258,7 +285,7 @@ app.get('/api/events', (req, res) => {
   });
 });
 
-// 3. Full live state fetch
+// 3. Full live state fetch (ERP collections included)
 app.get('/api/state', (req, res) => {
   const isAdmin = checkIsAdmin(req);
   res.json({
@@ -269,28 +296,65 @@ app.get('/api/state', (req, res) => {
     orders: db.orders,
     bookings: db.bookings,
     eventEnquiries: db.eventEnquiries,
+    staff: db.staff || DEFAULT_STAFF_MEMBERS,
+    rawInventory: db.rawInventory || INITIAL_RAW_INVENTORY,
+    expenses: db.expenses || INITIAL_EXPENSES,
+    tasks: db.tasks || INITIAL_TASKS,
     version: db.version
   });
 });
 
-// 4. Secure Admin Login with PIN
+// 4. Secure Multi-Role Staff & Owner Login with PIN
 app.post('/api/admin/login', (req, res) => {
   const { pin } = req.body;
   const cleanPin = pin ? pin.toString().trim() : '';
   const currentPin = db.settings?.adminPin || '1234';
 
+  const matchedStaff = (db.staff || []).find(s => s.pin === cleanPin);
+  let role = 'owner';
+  let staffName = 'Hotel Owner';
+  let roleTitle = 'Super Admin / Hotel Owner';
+
   if (cleanPin === currentPin || cleanPin === '1234' || cleanPin === 'admin@jonak') {
-    const token = crypto.randomBytes(32).toString('hex');
-    activeAdminTokens.add(token);
-    res.json({
-      success: true,
-      token,
-      message: 'Owner authentication successful',
-      settings: db.settings
-    });
+    role = 'owner';
+    staffName = 'Bishnu Choudhury (Owner)';
+    roleTitle = 'Super Admin / Hotel Owner';
+  } else if (cleanPin === '2222') {
+    role = 'reception';
+    staffName = 'Biki Sharma (Front Desk)';
+    roleTitle = 'Front Desk Executive';
+  } else if (cleanPin === '3333') {
+    role = 'kitchen';
+    staffName = 'Chef Ratan Das (Head Chef)';
+    roleTitle = 'Head Master Chef & Store';
+  } else if (cleanPin === '4444') {
+    role = 'delivery';
+    staffName = 'Monojit Roy (Delivery Captain)';
+    roleTitle = 'Delivery & Room Service';
+  } else if (cleanPin === '5555') {
+    role = 'housekeeping';
+    staffName = 'Rahul Barman (Housekeeping)';
+    roleTitle = 'Housekeeping Supervisor';
+  } else if (matchedStaff) {
+    role = matchedStaff.role;
+    staffName = matchedStaff.name;
+    roleTitle = matchedStaff.roleTitle || matchedStaff.role;
   } else {
-    res.status(401).json({ success: false, error: 'Incorrect Owner PIN or Password.' });
+    return res.status(401).json({ success: false, error: 'Invalid Staff PIN. Please use 1234 (Owner), 2222 (Reception), 3333 (Kitchen), 4444 (Delivery), or 5555 (Housekeeping).' });
   }
+
+  const token = crypto.randomBytes(32).toString('hex');
+  activeAdminTokens.set(token, { role, staffName, roleTitle, pin: cleanPin });
+
+  res.json({
+    success: true,
+    token,
+    role,
+    staffName,
+    roleTitle,
+    message: `${roleTitle} authenticated successfully`,
+    settings: role === 'owner' ? db.settings : getSanitizedSettings(false)
+  });
 });
 
 // 5. Admin Logout
@@ -374,6 +438,149 @@ app.post('/api/admin/update', requireAdmin, (req, res) => {
       return res.json({ success: true, settings: db.settings });
     }
 
+    case 'ADD_STOCK_PURCHASE': {
+      const { itemId, addedQty, purchaseCost, updatedBy, paidVia } = payload;
+      let updatedItem = null;
+      db.rawInventory = (db.rawInventory || INITIAL_RAW_INVENTORY).map((item) => {
+        if (item.id === itemId) {
+          const newQty = (parseFloat(item.currentStock) || 0) + (parseFloat(addedQty) || 0);
+          updatedItem = {
+            ...item,
+            currentStock: Math.max(0, Math.round(newQty * 10) / 10),
+            lastUpdated: 'Just now',
+            updatedBy: updatedBy || 'Staff'
+          };
+          return updatedItem;
+        }
+        return item;
+      });
+
+      // Automatically log expense cost for Owner's P&L calculation
+      if (purchaseCost && parseFloat(purchaseCost) > 0) {
+        const newExpense = {
+          id: `EXP-${Date.now().toString().slice(-4)}`,
+          date: new Date().toISOString().split('T')[0],
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          item: `${updatedItem ? updatedItem.name : 'Stock'} Purchase (+${addedQty} ${updatedItem ? updatedItem.unit : ''})`,
+          category: 'Kitchen Raw Stock',
+          amount: parseFloat(purchaseCost),
+          paidVia: paidVia || 'Cash',
+          loggedBy: updatedBy || 'Staff'
+        };
+        db.expenses = [newExpense, ...(db.expenses || INITIAL_EXPENSES)];
+        broadcastSSE('EXPENSES_UPDATED', db.expenses);
+      }
+
+      saveData();
+      broadcastSSE('INVENTORY_UPDATED', db.rawInventory);
+      return res.json({ success: true, item: updatedItem, rawInventory: db.rawInventory, expenses: db.expenses });
+    }
+
+    case 'USE_STOCK': {
+      const { itemId, usedQty, updatedBy } = payload;
+      let updatedItem = null;
+      db.rawInventory = (db.rawInventory || INITIAL_RAW_INVENTORY).map((item) => {
+        if (item.id === itemId) {
+          const newQty = Math.max(0, (parseFloat(item.currentStock) || 0) - (parseFloat(usedQty) || 0));
+          updatedItem = {
+            ...item,
+            currentStock: Math.round(newQty * 10) / 10,
+            lastUpdated: 'Just now',
+            updatedBy: updatedBy || 'Staff'
+          };
+          return updatedItem;
+        }
+        return item;
+      });
+      saveData();
+      broadcastSSE('INVENTORY_UPDATED', db.rawInventory);
+      return res.json({ success: true, item: updatedItem, rawInventory: db.rawInventory });
+    }
+
+    case 'ADD_EXPENSE': {
+      const expenseData = payload;
+      const newExpense = {
+        ...expenseData,
+        id: expenseData.id || `EXP-${Date.now().toString().slice(-4)}`,
+        date: expenseData.date || new Date().toISOString().split('T')[0],
+        time: expenseData.time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        amount: parseFloat(expenseData.amount) || 0
+      };
+      db.expenses = [newExpense, ...(db.expenses || INITIAL_EXPENSES)];
+      saveData();
+      broadcastSSE('EXPENSES_UPDATED', db.expenses);
+      return res.json({ success: true, expense: newExpense, expenses: db.expenses });
+    }
+
+    case 'TOGGLE_TASK': {
+      const { taskId, completedBy } = payload;
+      let targetTask = null;
+      db.tasks = (db.tasks || INITIAL_TASKS).map((t) => {
+        if (t.id === taskId) {
+          const newCompleted = !t.completed;
+          targetTask = {
+            ...t,
+            completed: newCompleted,
+            completedBy: newCompleted ? (completedBy || 'Staff') : null,
+            completedAt: newCompleted ? 'Just now' : null
+          };
+          return targetTask;
+        }
+        return t;
+      });
+      saveData();
+      broadcastSSE('TASKS_UPDATED', db.tasks);
+      return res.json({ success: true, task: targetTask, tasks: db.tasks });
+    }
+
+    case 'ADD_TASK': {
+      const taskData = payload;
+      const newTask = {
+        ...taskData,
+        id: taskData.id || `TSK-${Date.now().toString().slice(-4)}`,
+        completed: false,
+        completedBy: null,
+        completedAt: null
+      };
+      db.tasks = [...(db.tasks || INITIAL_TASKS), newTask];
+      saveData();
+      broadcastSSE('TASKS_UPDATED', db.tasks);
+      return res.json({ success: true, task: newTask, tasks: db.tasks });
+    }
+
+    case 'UPDATE_STAFF': {
+      const staffMember = payload;
+      let exists = false;
+      db.staff = (db.staff || DEFAULT_STAFF_MEMBERS).map((s) => {
+        if (s.id === staffMember.id) {
+          exists = true;
+          return { ...s, ...staffMember };
+        }
+        return s;
+      });
+      if (!exists) {
+        db.staff = [...db.staff, { ...staffMember, id: staffMember.id || `STF-${Date.now().toString().slice(-3)}` }];
+      }
+      saveData();
+      broadcastSSE('STAFF_UPDATED', db.staff);
+      return res.json({ success: true, staff: db.staff });
+    }
+
+    case 'UPDATE_HOUSEKEEPING': {
+      const { roomNumber, cleaningStatus } = payload;
+      let targetRoom = null;
+      db.physicalRooms = (db.physicalRooms || OFFICIAL_PHYSICAL_ROOMS).map((pr) => {
+        if (pr.number === roomNumber || pr.roomNumber === roomNumber) {
+          targetRoom = { ...pr, cleaningStatus };
+          return targetRoom;
+        }
+        return pr;
+      });
+      saveData();
+      broadcastSSE('PHYSICAL_ROOMS_UPDATED', db.physicalRooms);
+      return res.json({ success: true, room: targetRoom, physicalRooms: db.physicalRooms });
+    }
+
     default: {
       // General payload update
       if (payload?.menu) db.menu = payload.menu;
@@ -383,11 +590,19 @@ app.post('/api/admin/update', requireAdmin, (req, res) => {
         recalculateCategoryAvailability();
       }
       if (payload?.settings) db.settings = { ...db.settings, ...payload.settings };
+      if (payload?.staff) db.staff = payload.staff;
+      if (payload?.rawInventory) db.rawInventory = payload.rawInventory;
+      if (payload?.expenses) db.expenses = payload.expenses;
+      if (payload?.tasks) db.tasks = payload.tasks;
       saveData();
       broadcastSSE('MENU_UPDATED', db.menu);
       broadcastSSE('ROOMS_UPDATED', db.rooms);
       broadcastSSE('PHYSICAL_ROOMS_UPDATED', db.physicalRooms);
       broadcastSSE('SETTINGS_UPDATED', getSanitizedSettings(false));
+      broadcastSSE('INVENTORY_UPDATED', db.rawInventory);
+      broadcastSSE('EXPENSES_UPDATED', db.expenses);
+      broadcastSSE('TASKS_UPDATED', db.tasks);
+      broadcastSSE('STAFF_UPDATED', db.staff);
       return res.json({ success: true, message: 'Updated successfully' });
     }
   }
@@ -635,7 +850,176 @@ app.post('/api/events', (req, res) => {
   res.status(201).json({ success: true, enquiry: newEvent });
 });
 
-// 14. Reset to Factory Defaults
+// 14. Kitchen Raw Material & Store Inventory REST Routes
+app.get('/api/inventory', (req, res) => {
+  res.json(db.rawInventory || INITIAL_RAW_INVENTORY);
+});
+
+app.post('/api/inventory/purchase', requireAdmin, (req, res) => {
+  const { itemId, addedQty, purchaseCost, updatedBy, paidVia } = req.body;
+  let updatedItem = null;
+  db.rawInventory = (db.rawInventory || INITIAL_RAW_INVENTORY).map((item) => {
+    if (item.id === itemId) {
+      const newQty = (parseFloat(item.currentStock) || 0) + (parseFloat(addedQty) || 0);
+      updatedItem = {
+        ...item,
+        currentStock: Math.max(0, Math.round(newQty * 10) / 10),
+        lastUpdated: 'Just now',
+        updatedBy: updatedBy || 'Staff'
+      };
+      return updatedItem;
+    }
+    return item;
+  });
+
+  // Automatically log expense cost for Owner P&L
+  if (purchaseCost && parseFloat(purchaseCost) > 0) {
+    const newExpense = {
+      id: `EXP-${Date.now().toString().slice(-4)}`,
+      date: new Date().toISOString().split('T')[0],
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      item: `${updatedItem ? updatedItem.name : 'Stock'} Purchase (+${addedQty} ${updatedItem ? updatedItem.unit : ''})`,
+      category: 'Kitchen Raw Stock',
+      amount: parseFloat(purchaseCost),
+      paidVia: paidVia || 'Cash',
+      loggedBy: updatedBy || 'Staff'
+    };
+    db.expenses = [newExpense, ...(db.expenses || INITIAL_EXPENSES)];
+    broadcastSSE('EXPENSES_UPDATED', db.expenses);
+  }
+
+  saveData();
+  broadcastSSE('INVENTORY_UPDATED', db.rawInventory);
+  res.json({ success: true, item: updatedItem, rawInventory: db.rawInventory, expenses: db.expenses });
+});
+
+app.post('/api/inventory/use', requireAdmin, (req, res) => {
+  const { itemId, usedQty, updatedBy } = req.body;
+  let updatedItem = null;
+  db.rawInventory = (db.rawInventory || INITIAL_RAW_INVENTORY).map((item) => {
+    if (item.id === itemId) {
+      const newQty = Math.max(0, (parseFloat(item.currentStock) || 0) - (parseFloat(usedQty) || 0));
+      updatedItem = {
+        ...item,
+        currentStock: Math.round(newQty * 10) / 10,
+        lastUpdated: 'Just now',
+        updatedBy: updatedBy || 'Staff'
+      };
+      return updatedItem;
+    }
+    return item;
+  });
+  saveData();
+  broadcastSSE('INVENTORY_UPDATED', db.rawInventory);
+  res.json({ success: true, item: updatedItem, rawInventory: db.rawInventory });
+});
+
+// 15. Operational Expenses REST Routes
+app.get('/api/expenses', (req, res) => {
+  res.json(db.expenses || INITIAL_EXPENSES);
+});
+
+app.post('/api/expenses', requireAdmin, (req, res) => {
+  const expenseData = req.body;
+  const newExpense = {
+    ...expenseData,
+    id: expenseData.id || `EXP-${Date.now().toString().slice(-4)}`,
+    date: expenseData.date || new Date().toISOString().split('T')[0],
+    time: expenseData.time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    amount: parseFloat(expenseData.amount) || 0
+  };
+  db.expenses = [newExpense, ...(db.expenses || INITIAL_EXPENSES)];
+  saveData();
+  broadcastSSE('EXPENSES_UPDATED', db.expenses);
+  res.status(201).json({ success: true, expense: newExpense, expenses: db.expenses });
+});
+
+// 16. Operational Tasks REST Routes
+app.get('/api/tasks', (req, res) => {
+  res.json(db.tasks || INITIAL_TASKS);
+});
+
+app.put('/api/tasks/:id/toggle', requireAdmin, (req, res) => {
+  const { id } = req.params;
+  const { completedBy } = req.body;
+  let targetTask = null;
+  db.tasks = (db.tasks || INITIAL_TASKS).map((t) => {
+    if (t.id === id) {
+      const newCompleted = !t.completed;
+      targetTask = {
+        ...t,
+        completed: newCompleted,
+        completedBy: newCompleted ? (completedBy || 'Staff') : null,
+        completedAt: newCompleted ? 'Just now' : null
+      };
+      return targetTask;
+    }
+    return t;
+  });
+  saveData();
+  broadcastSSE('TASKS_UPDATED', db.tasks);
+  res.json({ success: true, task: targetTask, tasks: db.tasks });
+});
+
+app.post('/api/tasks', requireAdmin, (req, res) => {
+  const taskData = req.body;
+  const newTask = {
+    ...taskData,
+    id: taskData.id || `TSK-${Date.now().toString().slice(-4)}`,
+    completed: false,
+    completedBy: null,
+    completedAt: null
+  };
+  db.tasks = [...(db.tasks || INITIAL_TASKS), newTask];
+  saveData();
+  broadcastSSE('TASKS_UPDATED', db.tasks);
+  res.status(201).json({ success: true, task: newTask, tasks: db.tasks });
+});
+
+// 17. Staff Management REST Routes
+app.get('/api/staff', (req, res) => {
+  res.json(db.staff || DEFAULT_STAFF_MEMBERS);
+});
+
+app.post('/api/staff', requireAdmin, (req, res) => {
+  const staffMember = req.body;
+  const newStaff = {
+    ...staffMember,
+    id: staffMember.id || `STF-${Date.now().toString().slice(-3)}`,
+    status: staffMember.status || 'On Duty'
+  };
+  db.staff = [...(db.staff || DEFAULT_STAFF_MEMBERS), newStaff];
+  saveData();
+  broadcastSSE('STAFF_UPDATED', db.staff);
+  res.status(201).json({ success: true, staffMember: newStaff, staff: db.staff });
+});
+
+app.put('/api/staff/:id', requireAdmin, (req, res) => {
+  const { id } = req.params;
+  const updates = req.body;
+  db.staff = (db.staff || DEFAULT_STAFF_MEMBERS).map((s) => (s.id === id ? { ...s, ...updates } : s));
+  saveData();
+  broadcastSSE('STAFF_UPDATED', db.staff);
+  res.json({ success: true, staff: db.staff });
+});
+
+// 18. Housekeeping Status Update
+app.put('/api/rooms/housekeeping', requireAdmin, (req, res) => {
+  const { roomNumber, cleaningStatus } = req.body;
+  let targetRoom = null;
+  db.physicalRooms = (db.physicalRooms || OFFICIAL_PHYSICAL_ROOMS).map((pr) => {
+    if (pr.number === roomNumber || pr.roomNumber === roomNumber) {
+      targetRoom = { ...pr, cleaningStatus };
+      return targetRoom;
+    }
+    return pr;
+  });
+  saveData();
+  broadcastSSE('PHYSICAL_ROOMS_UPDATED', db.physicalRooms);
+  res.json({ success: true, room: targetRoom, physicalRooms: db.physicalRooms });
+});
+
+// 19. Reset to Factory Defaults
 app.post('/api/admin/reset', requireAdmin, (req, res) => {
   db.menu = INITIAL_MENU;
   db.rooms = INITIAL_ROOMS;

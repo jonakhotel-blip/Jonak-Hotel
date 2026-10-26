@@ -34,8 +34,22 @@ import {
   ExternalLink,
   Wifi,
   ShieldCheck,
-  FileText
+  FileText,
+  BarChart3,
+  Boxes,
+  Users,
+  CheckSquare,
+  ChefHat,
+  Truck,
+  Sparkle
 } from 'lucide-react';
+
+import { AnalyticsDesk } from './erp/AnalyticsDesk';
+import { InventoryDesk } from './erp/InventoryDesk';
+import { KitchenDesk } from './erp/KitchenDesk';
+import { DeliveryDesk } from './erp/DeliveryDesk';
+import { HousekeepingDesk } from './erp/HousekeepingDesk';
+import { StaffRosterDesk } from './erp/StaffRosterDesk';
 
 export const AdminPanel = ({ onExitAdmin }) => {
   const { 
@@ -62,7 +76,16 @@ export const AdminPanel = ({ onExitAdmin }) => {
     isAdminAuthenticated,
     adminLogin,
     adminLogout,
-    isCloudSynced
+    isCloudSynced,
+    // ERP Ecosystem
+    staffRoles,
+    staff,
+    rawInventory,
+    expenses,
+    tasks,
+    staffSession,
+    setStaffSession,
+    updateHousekeeping
   } = useHotel();
 
   // Authentication state
@@ -70,8 +93,15 @@ export const AdminPanel = ({ onExitAdmin }) => {
   const [pinError, setPinError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  // Active Admin Tab: 'DASHBOARD' | 'ORDERS' | 'MENU' | 'ROOMS' | 'SETTINGS' | 'QR_CODES'
-  const [activeTab, setActiveTab] = useState('DASHBOARD');
+  // Active Admin Tab: default to 'ANALYTICS' for owner or appropriate desk
+  const [activeTab, setActiveTab] = useState(() => {
+    const role = staffSession?.role || 'owner';
+    if (role === 'kitchen') return 'KITCHEN';
+    if (role === 'delivery') return 'DELIVERY';
+    if (role === 'housekeeping') return 'HOUSEKEEPING';
+    if (role === 'reception') return 'ROOMS';
+    return 'ANALYTICS';
+  });
 
   // Menu Search & Filter
   const [dishSearch, setDishSearch] = useState('');
@@ -120,19 +150,27 @@ export const AdminPanel = ({ onExitAdmin }) => {
     });
   }, [qrTargetType, qrTargetValue, qrCustomDomain]);
 
-  // Handle Secure PIN Login
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    if (!pinInput.trim()) {
-      setPinError('Please enter your 4-digit Owner PIN or Password.');
+  // Handle Secure PIN Login (accepts optional direct PIN from quick role selector)
+  const handleLogin = async (e, directPin) => {
+    if (e && e.preventDefault) e.preventDefault();
+    const pin = (directPin !== undefined ? directPin : pinInput).trim();
+    if (!pin) {
+      setPinError('Please enter your 4-digit Staff PIN or Password.');
       return;
     }
     setIsLoggingIn(true);
     setPinError('');
-    const res = await adminLogin(pinInput.trim());
+    const res = await adminLogin(pin);
     setIsLoggingIn(false);
     if (!res.success) {
       setPinError(res.error || 'Incorrect PIN or Password.');
+    } else {
+      const role = res.session?.role || 'owner';
+      if (role === 'kitchen') setActiveTab('KITCHEN');
+      else if (role === 'delivery') setActiveTab('DELIVERY');
+      else if (role === 'housekeeping') setActiveTab('HOUSEKEEPING');
+      else if (role === 'reception') setActiveTab('ROOMS');
+      else setActiveTab('ANALYTICS');
     }
   };
 
@@ -175,81 +213,259 @@ export const AdminPanel = ({ onExitAdmin }) => {
     return order.status === orderFilter;
   });
 
-  // Counts for Top Summary Cards
+  // Counts for Badges & Summary Cards
   const inStockCount = menu.filter(m => m.inStock).length;
   const outOfStockCount = menu.length - inStockCount;
   const pendingOrdersCount = orders.filter(o => o.status === 'New' || o.status === 'Confirmed').length;
   const pendingBookingsCount = bookings.filter(b => b.status === 'New').length;
+  const lowStockAlertCount = (rawInventory || []).filter(item => Number(item.currentStock) <= Number(item.minThreshold)).length;
+  const dirtyRoomsCount = (physicalRooms || []).filter(r => r.cleaningStatus === 'Dirty').length;
+  const pendingTasksCount = (tasks || []).filter(t => !t.completed).length;
+
+  // Role permissions & visible tabs definition
+  const currentRole = staffSession?.role || 'owner';
+
+  const roleDefinitions = [
+    {
+      role: 'owner',
+      title: 'Super Admin / Owner',
+      pin: '1234',
+      icon: '👑',
+      color: '#D4AF37',
+      desc: 'Full ERP Control • P&L Analytics • Staff • Store & Room Rates'
+    },
+    {
+      role: 'reception',
+      title: 'Front Desk / Receptionist',
+      pin: '2222',
+      icon: '🛎️',
+      color: '#3B82F6',
+      desc: 'Rooms 101–304 Check-in/out • Aadhaar e-KYC • Police Form C'
+    },
+    {
+      role: 'kitchen',
+      title: 'Kitchen Chef / KDS',
+      pin: '3333',
+      icon: '👨‍🍳',
+      color: '#F97316',
+      desc: 'Live KDS Orders (New ➔ Cooking ➔ Ready) • Raw Material Stock'
+    },
+    {
+      role: 'delivery',
+      title: 'Delivery & Waiter Desk',
+      pin: '4444',
+      icon: '🛵',
+      color: '#10B981',
+      desc: 'Ready Orders • 1-Tap Google GPS Navigation • Cash/UPI Collection'
+    },
+    {
+      role: 'housekeeping',
+      title: 'Housekeeping Desk',
+      pin: '5555',
+      icon: '🧹',
+      color: '#A855F7',
+      desc: '9 Rooms Cleanliness Status (Clean / Dirty / In Progress) • SOP'
+    }
+  ];
+
+  const allTabs = [
+    { id: 'ANALYTICS', label: 'Executive Analytics & P&L', icon: BarChart3, roles: ['owner'], badge: null },
+    { id: 'ROOMS', label: 'Front Desk & Rooms (101-304)', icon: BedDouble, roles: ['owner', 'reception'], badge: pendingBookingsCount > 0 ? pendingBookingsCount : null },
+    { id: 'KITCHEN', label: 'Kitchen KDS', icon: ChefHat, roles: ['owner', 'kitchen'], badge: null },
+    { id: 'INVENTORY', label: 'Store & Raw Materials', icon: Boxes, roles: ['owner', 'kitchen'], badge: lowStockAlertCount > 0 ? `${lowStockAlertCount} Low` : null, badgeColor: '#EF4444' },
+    { id: 'DELIVERY', label: 'Delivery & Waiters', icon: Truck, roles: ['owner', 'delivery'], badge: null },
+    { id: 'HOUSEKEEPING', label: 'Housekeeping Desk', icon: Sparkles, roles: ['owner', 'reception', 'housekeeping'], badge: dirtyRoomsCount > 0 ? `${dirtyRoomsCount} Dirty` : null, badgeColor: '#F59E0B' },
+    { id: 'STAFF_TASKS', label: 'Staff & Daily Tasks', icon: Users, roles: ['owner', 'reception', 'kitchen', 'delivery', 'housekeeping'], badge: pendingTasksCount > 0 ? pendingTasksCount : null },
+    { id: 'ORDERS', label: `Orders (${orders.length})`, icon: ShoppingBag, roles: ['owner'], badge: pendingOrdersCount > 0 ? pendingOrdersCount : null },
+    { id: 'MENU', label: '1-Tap Menu Manager', icon: UtensilsCrossed, roles: ['owner'], badge: outOfStockCount > 0 ? `${outOfStockCount} Out` : null, badgeColor: '#EF4444' },
+    { id: 'QR_CODES', label: 'Room & Table QR Codes', icon: QrCode, roles: ['owner', 'reception'], badge: null },
+    { id: 'SETTINGS', label: 'Rules & Settings', icon: SettingsIcon, roles: ['owner'], badge: null },
+  ];
+
+  const visibleTabs = allTabs.filter(t => t.roles.includes(currentRole));
+
+  // Sync activeTab if current tab is restricted for newly switched role
+  useEffect(() => {
+    if (staffSession?.role) {
+      const allowed = allTabs.filter(t => t.roles.includes(staffSession.role)).map(t => t.id);
+      if (!allowed.includes(activeTab)) {
+        if (staffSession.role === 'kitchen') setActiveTab('KITCHEN');
+        else if (staffSession.role === 'delivery') setActiveTab('DELIVERY');
+        else if (staffSession.role === 'housekeeping') setActiveTab('HOUSEKEEPING');
+        else if (staffSession.role === 'reception') setActiveTab('ROOMS');
+        else setActiveTab('ANALYTICS');
+      }
+    }
+  }, [staffSession?.role]);
 
   // --------------------------------------------------------------------------
-  // 1. PIN LOGIN SCREEN
+  // 1. MULTI-ROLE STAFF PIN LOGIN SCREEN
   // --------------------------------------------------------------------------
   if (!isAdminAuthenticated) {
     return (
       <div style={{
-        minHeight: '80vh',
+        minHeight: '88vh',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '2rem 1rem'
+        padding: '2.5rem 1rem',
+        background: 'radial-gradient(ellipse at 50% 20%, rgba(212,175,55,0.08) 0%, #070B14 70%)'
       }}>
         <div className="glass-card" style={{
-          maxWidth: '440px',
+          maxWidth: '560px',
           width: '100%',
           padding: '2.5rem 2rem',
           textAlign: 'center',
-          border: '1px solid var(--gold-primary)',
+          border: '1px solid rgba(212, 175, 55, 0.4)',
+          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.7)',
           position: 'relative'
         }}>
-          {/* Back to Site Button */}
+          {/* Back to Customer Site Button */}
           <button
             onClick={onExitAdmin}
             style={{
               position: 'absolute',
-              top: '1rem',
-              left: '1rem',
-              background: 'none',
-              border: 'none',
-              color: 'var(--text-muted)',
+              top: '1.25rem',
+              left: '1.25rem',
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid var(--border-gold)',
+              borderRadius: 'var(--radius-full)',
+              color: 'var(--gold-light)',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.3rem',
-              fontSize: '0.8rem'
+              gap: '0.4rem',
+              fontSize: '0.8rem',
+              padding: '0.4rem 0.8rem',
+              transition: 'all 0.2s'
             }}
           >
-            <ArrowLeft size={16} />
-            <span>Customer Site</span>
+            <ArrowLeft size={14} />
+            <span>Customer Website</span>
           </button>
 
+          {/* Hotel Crest & Badge */}
           <div style={{
-            width: '60px',
-            height: '60px',
+            width: '64px',
+            height: '64px',
             borderRadius: '50%',
-            background: 'rgba(212, 175, 55, 0.15)',
+            background: 'linear-gradient(135deg, rgba(212,175,55,0.2) 0%, rgba(212,175,55,0.05) 100%)',
             border: '2px solid var(--gold-primary)',
             color: 'var(--gold-primary)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            margin: '0 auto 1.25rem'
+            margin: '0.5rem auto 1rem',
+            boxShadow: '0 0 25px rgba(212, 175, 55, 0.3)'
           }}>
-            <Lock size={28} />
+            <Lock size={30} />
           </div>
 
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.4rem' }}>
-            Owner Command Center
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+            background: 'rgba(16, 185, 129, 0.12)',
+            border: '1px solid rgba(16, 185, 129, 0.35)',
+            color: '#34D399',
+            padding: '0.25rem 0.75rem',
+            borderRadius: 'var(--radius-full)',
+            fontSize: '0.72rem',
+            fontWeight: 700,
+            letterSpacing: '0.05em',
+            marginBottom: '0.75rem'
+          }}>
+            <ShieldCheck size={13} />
+            <span>100% PAPERLESS SMART HOTEL ERP</span>
+          </div>
+
+          <h2 style={{ fontSize: '1.65rem', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.35rem', letterSpacing: '-0.02em' }}>
+            Staff & Owner Work Desk
           </h2>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.8rem' }}>
-            Jonak Hotel & Restaurant • Barpeta<br />
-            Enter your secret Owner PIN or Password
+          <p style={{ fontSize: '0.86rem', color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: 1.5 }}>
+            Jonak Hotel & Restaurant • Barpeta District<br />
+            Select your work role or enter your secret employee PIN:
           </p>
 
-          <form onSubmit={handleLogin}>
-            <div className="form-group" style={{ marginBottom: '1rem' }}>
+          {/* 1-Tap Role Selector Cards */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: '0.65rem',
+            textAlign: 'left',
+            marginBottom: '1.5rem'
+          }}>
+            {roleDefinitions.map(r => (
+              <button
+                key={r.role}
+                type="button"
+                onClick={() => {
+                  setPinInput(r.pin);
+                  handleLogin(null, r.pin);
+                }}
+                disabled={isLoggingIn}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  border: `1px solid ${r.color}40`,
+                  borderRadius: '10px',
+                  padding: '0.7rem 0.85rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.65rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.07)';
+                  e.currentTarget.style.borderColor = r.color;
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
+                  e.currentTarget.style.borderColor = `${r.color}40`;
+                  e.currentTarget.style.transform = 'none';
+                }}
+              >
+                <div style={{
+                  fontSize: '1.35rem',
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '8px',
+                  background: `${r.color}20`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  {r.icon}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {r.title}
+                    </div>
+                    <span style={{ fontSize: '0.68rem', fontWeight: 800, color: r.color, background: `${r.color}15`, padding: '1px 5px', borderRadius: '4px' }}>
+                      {r.pin}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', lineHeight: 1.25, marginTop: '2px' }}>
+                    {r.desc}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {/* Manual PIN Input Form */}
+          <form onSubmit={handleLogin} style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '1.25rem' }}>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.5rem', fontWeight: 600 }}>
+              Or enter custom PIN / Owner Password:
+            </div>
+            <div className="form-group" style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem' }}>
               <input
                 type="password"
-                autoFocus
                 placeholder="Enter 4-Digit PIN or Password"
                 value={pinInput}
                 onChange={(e) => { setPinInput(e.target.value); setPinError(''); }}
@@ -257,10 +473,20 @@ export const AdminPanel = ({ onExitAdmin }) => {
                 style={{
                   textAlign: 'center',
                   fontSize: '1.25rem',
-                  letterSpacing: '0.2em',
-                  fontWeight: 800
+                  letterSpacing: '0.25em',
+                  fontWeight: 800,
+                  flex: 1
                 }}
               />
+              <button
+                type="submit"
+                disabled={isLoggingIn}
+                className="btn btn-primary"
+                style={{ padding: '0 1.25rem', fontWeight: 700 }}
+              >
+                <Unlock size={16} />
+                <span>{isLoggingIn ? '...' : 'Unlock'}</span>
+              </button>
             </div>
 
             {pinError && (
@@ -269,31 +495,29 @@ export const AdminPanel = ({ onExitAdmin }) => {
                 fontSize: '0.82rem',
                 marginBottom: '1rem',
                 background: 'rgba(239, 68, 68, 0.12)',
-                padding: '0.5rem',
-                borderRadius: '6px'
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                padding: '0.55rem',
+                borderRadius: '8px'
               }}>
                 {pinError}
               </div>
             )}
-
-            <button
-              type="submit"
-              disabled={isLoggingIn}
-              className="btn btn-primary"
-              style={{ width: '100%', padding: '0.85rem', fontWeight: 700, marginBottom: '0.5rem' }}
-            >
-              <Unlock size={16} />
-              <span>{isLoggingIn ? 'Verifying PIN...' : 'Unlock Admin Panel'}</span>
-            </button>
           </form>
+
+          {/* Footnote */}
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '1.25rem' }}>
+            🔒 Bank-Grade PIN Security • 9 Physical Rooms Connected • Live SSE Sync Active
+          </div>
         </div>
       </div>
     );
   }
 
   // --------------------------------------------------------------------------
-  // 2. AUTHENTICATED OWNER COMMAND CENTER
+  // 2. AUTHENTICATED SMART ERP PORTAL
   // --------------------------------------------------------------------------
+  const activeRoleMeta = roleDefinitions.find(r => r.role === currentRole) || roleDefinitions[0];
+
   return (
     <div style={{ minHeight: '100vh', background: '#070B14', paddingBottom: '5rem' }}>
       
@@ -301,7 +525,7 @@ export const AdminPanel = ({ onExitAdmin }) => {
       <header style={{
         background: '#0B1120',
         borderBottom: '1px solid var(--border-gold)',
-        padding: '0.85rem 0',
+        padding: '0.75rem 0',
         position: 'sticky',
         top: 0,
         zIndex: 850
@@ -310,23 +534,37 @@ export const AdminPanel = ({ onExitAdmin }) => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: '1rem'
+          gap: '1rem',
+          flexWrap: 'wrap'
         }}>
-          {/* Logo & Portal Title */}
+          {/* Logo & Portal Identity */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <img src="/jonak.png" alt="Jonak Logo" style={{ width: 34, height: 34, objectFit: 'contain' }} />
+            <img src="/jonak.png" alt="Jonak Logo" style={{ width: 36, height: 36, objectFit: 'contain' }} />
             <div>
-              <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--gold-light)' }}>
-                Owner Command Center
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontSize: '1.05rem', fontWeight: 900, color: 'var(--gold-light)' }}>
+                  Jonak Smart ERP
+                </span>
+                <span style={{
+                  fontSize: '0.65rem',
+                  fontWeight: 800,
+                  color: activeRoleMeta.color,
+                  background: `${activeRoleMeta.color}15`,
+                  border: `1px solid ${activeRoleMeta.color}40`,
+                  padding: '2px 8px',
+                  borderRadius: 'var(--radius-full)'
+                }}>
+                  {activeRoleMeta.icon} {staffSession?.roleTitle || activeRoleMeta.title}
+                </span>
               </div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                Jonak Hotel & Restaurant • Smartphone & Desktop Hub
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                Active Desk: <strong style={{ color: '#FFFFFF' }}>{staffSession?.staffName || 'Admin'}</strong> • Barpeta District
               </div>
             </div>
           </div>
 
           {/* Quick Sound Alert Test, Cloud Sync & Logout Controls */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             {/* Live Cloud Status */}
             <div style={{
               display: 'flex',
@@ -346,7 +584,7 @@ export const AdminPanel = ({ onExitAdmin }) => {
                 background: isCloudSynced ? '#10B981' : '#F59E0B',
                 boxShadow: isCloudSynced ? '0 0 8px #10B981' : 'none'
               }} />
-              <span className="hide-on-mobile">{isCloudSynced ? 'Cloud Synced' : 'Syncing...'}</span>
+              <span className="hide-on-mobile">{isCloudSynced ? 'SSE Real-Time' : 'Syncing...'}</span>
             </div>
 
             <button
@@ -368,106 +606,86 @@ export const AdminPanel = ({ onExitAdmin }) => {
               style={{ padding: '0.45rem 0.75rem', fontSize: '0.78rem' }}
             >
               <Eye size={14} />
-              <span className="hide-on-mobile">View Website</span>
+              <span className="hide-on-mobile">Customer View</span>
             </button>
 
             <button
               onClick={() => adminLogout()}
               className="btn btn-secondary btn-sm"
-              title="Lock Admin"
-              style={{ padding: '0.45rem 0.65rem' }}
+              title="Switch Staff / Lock Desk"
+              style={{ padding: '0.45rem 0.75rem', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
             >
               <LogOut size={14} color="#EF4444" />
+              <span className="hide-on-mobile" style={{ color: '#EF4444', fontWeight: 700 }}>Switch Staff</span>
             </button>
           </div>
         </div>
 
-        {/* Tab Switcher Bar */}
-        <div className="container" style={{ marginTop: '0.75rem' }}>
+        {/* Role-Restricted Tab Switcher Bar */}
+        <div className="container" style={{ marginTop: '0.65rem' }}>
           <div style={{
             display: 'flex',
-            gap: '0.5rem',
+            gap: '0.4rem',
             overflowX: 'auto',
-            paddingBottom: '0.25rem',
+            paddingBottom: '0.35rem',
             scrollbarWidth: 'none'
           }}>
-            <button
-              onClick={() => setActiveTab('DASHBOARD')}
-              className={`btn btn-sm ${activeTab === 'DASHBOARD' ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ borderRadius: 'var(--radius-full)' }}
-            >
-              <LayoutDashboard size={14} />
-              <span>Overview</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('ORDERS')}
-              className={`btn btn-sm ${activeTab === 'ORDERS' ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ borderRadius: 'var(--radius-full)', position: 'relative' }}
-            >
-              <ShoppingBag size={14} />
-              <span>Orders ({orders.length})</span>
-              {pendingOrdersCount > 0 && (
-                <span style={{
-                  background: '#EF4444',
-                  color: 'white',
-                  borderRadius: '10px',
-                  padding: '1px 6px',
-                  fontSize: '0.65rem',
-                  fontWeight: 800,
-                  marginLeft: '4px'
-                }}>
-                  {pendingOrdersCount}
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => setActiveTab('MENU')}
-              className={`btn btn-sm ${activeTab === 'MENU' ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ borderRadius: 'var(--radius-full)' }}
-            >
-              <UtensilsCrossed size={14} />
-              <span>1-Tap Menu Manager</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('ROOMS')}
-              className={`btn btn-sm ${activeTab === 'ROOMS' ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ borderRadius: 'var(--radius-full)' }}
-            >
-              <BedDouble size={14} />
-              <span>Rooms & Tariffs</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('SETTINGS')}
-              className={`btn btn-sm ${activeTab === 'SETTINGS' ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ borderRadius: 'var(--radius-full)' }}
-            >
-              <SettingsIcon size={14} />
-              <span>Delivery & Hotel Rules</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('QR_CODES')}
-              className={`btn btn-sm ${activeTab === 'QR_CODES' ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ borderRadius: 'var(--radius-full)', borderColor: 'var(--gold-primary)' }}
-            >
-              <QrCode size={14} color="var(--gold-primary)" />
-              <span style={{ color: activeTab === 'QR_CODES' ? '#070B14' : 'var(--gold-light)' }}>
-                Room & Table QR Codes
-              </span>
-            </button>
+            {visibleTabs.map(tab => {
+              const TabIcon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`btn btn-sm ${isActive ? 'btn-primary' : 'btn-secondary'}`}
+                  style={{
+                    borderRadius: 'var(--radius-full)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.45rem',
+                    padding: '0.45rem 0.85rem',
+                    fontSize: '0.8rem',
+                    fontWeight: isActive ? 800 : 600,
+                    whiteSpace: 'nowrap',
+                    borderColor: isActive ? 'var(--gold-primary)' : 'rgba(255, 255, 255, 0.1)'
+                  }}
+                >
+                  <TabIcon size={14} color={isActive ? '#070B14' : 'var(--gold-primary)'} />
+                  <span>{tab.label}</span>
+                  {tab.badge && (
+                    <span style={{
+                      background: tab.badgeColor || '#EF4444',
+                      color: '#FFFFFF',
+                      borderRadius: '10px',
+                      padding: '1px 6px',
+                      fontSize: '0.65rem',
+                      fontWeight: 900
+                    }}>
+                      {tab.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
       </header>
 
       {/* Main Admin Tab Body */}
-      <main className="container" style={{ marginTop: '2rem' }}>
-        
+      <main className="container" style={{ marginTop: '1.75rem' }}>
+
         {/* ==================================================================
-            TAB 1: OVERVIEW DASHBOARD
+            ERP WORK DESKS (ROLE BASED)
+            ================================================================== */}
+        {activeTab === 'ANALYTICS' && <AnalyticsDesk />}
+        {activeTab === 'KITCHEN' && <KitchenDesk />}
+        {activeTab === 'INVENTORY' && <InventoryDesk />}
+        {activeTab === 'DELIVERY' && <DeliveryDesk />}
+        {activeTab === 'HOUSEKEEPING' && <HousekeepingDesk />}
+        {activeTab === 'STAFF_TASKS' && <StaffRosterDesk />}
+
+        {/* ==================================================================
+            TAB: OVERVIEW DASHBOARD (COMPATIBILITY)
             ================================================================== */}
         {activeTab === 'DASHBOARD' && (
           <div>

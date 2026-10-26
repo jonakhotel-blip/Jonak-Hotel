@@ -10,7 +10,12 @@ import {
   BARPETA_LOCALITIES,
   NEARBY_LANDMARKS,
   FAQ_DATA,
-  INITIAL_EVENTS
+  INITIAL_EVENTS,
+  DEFAULT_STAFF_MEMBERS,
+  INITIAL_RAW_INVENTORY,
+  INITIAL_EXPENSES,
+  INITIAL_TASKS,
+  STAFF_ROLES
 } from '../data/seedData';
 
 const HotelContext = createContext();
@@ -24,7 +29,12 @@ const STORAGE_KEYS = {
   BOOKINGS: 'jonak_bookings_v1',
   EVENTS: 'jonak_events_v1',
   CART: 'jonak_cart_v1',
-  ADMIN_TOKEN: 'jonak_admin_token_v1'
+  ADMIN_TOKEN: 'jonak_admin_token_v1',
+  STAFF: 'jonak_staff_v1',
+  INVENTORY: 'jonak_inventory_v1',
+  EXPENSES: 'jonak_expenses_v1',
+  TASKS: 'jonak_tasks_v1',
+  STAFF_SESSION: 'jonak_staff_session_v1'
 };
 
 // Play audio alert function for hotel owner when a new order/booking arrives
@@ -137,6 +147,53 @@ export const HotelProvider = ({ children }) => {
     }
   });
 
+  // ERP State: Staff, Raw Inventory, Expenses, Tasks
+  const [staff, setStaff] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.STAFF);
+      return saved ? JSON.parse(saved) : DEFAULT_STAFF_MEMBERS;
+    } catch {
+      return DEFAULT_STAFF_MEMBERS;
+    }
+  });
+
+  const [rawInventory, setRawInventory] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.INVENTORY);
+      return saved ? JSON.parse(saved) : INITIAL_RAW_INVENTORY;
+    } catch {
+      return INITIAL_RAW_INVENTORY;
+    }
+  });
+
+  const [expenses, setExpenses] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.EXPENSES);
+      return saved ? JSON.parse(saved) : INITIAL_EXPENSES;
+    } catch {
+      return INITIAL_EXPENSES;
+    }
+  });
+
+  const [tasks, setTasks] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.TASKS);
+      return saved ? JSON.parse(saved) : INITIAL_TASKS;
+    } catch {
+      return INITIAL_TASKS;
+    }
+  });
+
+  // Multi-Role Staff Session State
+  const [staffSession, setStaffSession] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.STAFF_SESSION);
+      return saved ? JSON.parse(saved) : { role: 'owner', staffName: 'Bishnu Choudhury (Owner)', roleTitle: 'Super Admin / Hotel Owner' };
+    } catch {
+      return { role: 'owner', staffName: 'Bishnu Choudhury (Owner)', roleTitle: 'Super Admin / Hotel Owner' };
+    }
+  });
+
   // Admin Auth State
   const [adminToken, setAdminToken] = useState(() => {
     return localStorage.getItem(STORAGE_KEYS.ADMIN_TOKEN) || '';
@@ -199,6 +256,10 @@ export const HotelProvider = ({ children }) => {
       if (data.orders) setOrders(data.orders);
       if (data.bookings) setBookings(data.bookings);
       if (data.eventEnquiries) setEventEnquiries(data.eventEnquiries);
+      if (data.staff) setStaff(data.staff);
+      if (data.rawInventory) setRawInventory(data.rawInventory);
+      if (data.expenses) setExpenses(data.expenses);
+      if (data.tasks) setTasks(data.tasks);
       if (data.version) serverVersionRef.current = data.version;
       setIsCloudSynced(true);
     } catch (err) {
@@ -319,6 +380,42 @@ export const HotelProvider = ({ children }) => {
         } catch {}
       });
 
+      eventSource.addEventListener('INVENTORY_UPDATED', (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          setRawInventory(data.payload);
+          serverVersionRef.current = data.version;
+          setIsCloudSynced(true);
+        } catch {}
+      });
+
+      eventSource.addEventListener('EXPENSES_UPDATED', (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          setExpenses(data.payload);
+          serverVersionRef.current = data.version;
+          setIsCloudSynced(true);
+        } catch {}
+      });
+
+      eventSource.addEventListener('TASKS_UPDATED', (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          setTasks(data.payload);
+          serverVersionRef.current = data.version;
+          setIsCloudSynced(true);
+        } catch {}
+      });
+
+      eventSource.addEventListener('STAFF_UPDATED', (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          setStaff(data.payload);
+          serverVersionRef.current = data.version;
+          setIsCloudSynced(true);
+        } catch {}
+      });
+
       eventSource.addEventListener('STATE_RESET', (e) => {
         try {
           const data = JSON.parse(e.data);
@@ -398,6 +495,26 @@ export const HotelProvider = ({ children }) => {
     try { localStorage.setItem(STORAGE_KEYS.CART, JSON.stringify(cart)); } catch {}
   }, [cart]);
 
+  useEffect(() => {
+    try { localStorage.setItem(STORAGE_KEYS.STAFF, JSON.stringify(staff)); } catch {}
+  }, [staff]);
+
+  useEffect(() => {
+    try { localStorage.setItem(STORAGE_KEYS.INVENTORY, JSON.stringify(rawInventory)); } catch {}
+  }, [rawInventory]);
+
+  useEffect(() => {
+    try { localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(expenses)); } catch {}
+  }, [expenses]);
+
+  useEffect(() => {
+    try { localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks)); } catch {}
+  }, [tasks]);
+
+  useEffect(() => {
+    try { localStorage.setItem(STORAGE_KEYS.STAFF_SESSION, JSON.stringify(staffSession)); } catch {}
+  }, [staffSession]);
+
   // --- CART ACTIONS ---
   const addToCart = (dish) => {
     if (!dish.inStock) {
@@ -430,7 +547,7 @@ export const HotelProvider = ({ children }) => {
 
   const clearCart = () => setCart([]);
 
-  // --- ADMIN AUTHENTICATION ACTIONS ---
+  // --- MULTI-ROLE STAFF & ADMIN AUTHENTICATION ---
   const adminLogin = async (pin) => {
     try {
       const res = await fetch('/api/admin/login', {
@@ -443,26 +560,64 @@ export const HotelProvider = ({ children }) => {
         setAdminToken(data.token);
         setIsAdminAuthenticated(true);
         localStorage.setItem(STORAGE_KEYS.ADMIN_TOKEN, data.token);
+
+        const newSession = {
+          role: data.role || 'owner',
+          staffName: data.staffName || 'Staff',
+          roleTitle: data.roleTitle || 'Staff Member',
+          permissions: data.permissions || ['ALL']
+        };
+        setStaffSession(newSession);
+        localStorage.setItem(STORAGE_KEYS.STAFF_SESSION, JSON.stringify(newSession));
+
         if (data.settings) setSettings(data.settings);
-        showToast('Welcome back, Hotel Owner!', 'success');
+        showToast(`Welcome back, ${newSession.staffName}! (${newSession.roleTitle})`, 'success');
         playNotificationChime();
-        return { success: true };
+        return { success: true, session: newSession };
       } else {
-        return { success: false, error: data.error || 'Invalid Owner PIN' };
+        return { success: false, error: data.error || 'Invalid Staff or Owner PIN' };
       }
     } catch (err) {
-      // Local fallback for dev/offline if backend is temporarily unreachable
+      // Local fallback for offline/development mode
       const cleanPin = pin ? pin.toString().trim() : '';
+      let role = 'owner';
+      let staffName = 'Hotel Owner';
+      let roleTitle = 'Super Admin / Owner';
+
       if (cleanPin === (settings.adminPin || '1234') || cleanPin === '1234' || cleanPin === 'admin@jonak') {
-        const dummyToken = 'offline-token-' + Date.now();
-        setAdminToken(dummyToken);
-        setIsAdminAuthenticated(true);
-        localStorage.setItem(STORAGE_KEYS.ADMIN_TOKEN, dummyToken);
-        showToast('Welcome back, Hotel Owner (Offline Mode)!', 'success');
-        playNotificationChime();
-        return { success: true };
+        role = 'owner';
+        staffName = 'Bishnu Choudhury (Owner)';
+        roleTitle = 'Super Admin / Hotel Owner';
+      } else if (cleanPin === '2222') {
+        role = 'reception';
+        staffName = 'Biki Sharma (Front Desk)';
+        roleTitle = 'Front Desk Executive';
+      } else if (cleanPin === '3333') {
+        role = 'kitchen';
+        staffName = 'Chef Ratan Das (Head Chef)';
+        roleTitle = 'Head Master Chef & Store';
+      } else if (cleanPin === '4444') {
+        role = 'delivery';
+        staffName = 'Monojit Roy (Delivery Captain)';
+        roleTitle = 'Delivery & Room Service';
+      } else if (cleanPin === '5555') {
+        role = 'housekeeping';
+        staffName = 'Rahul Barman (Housekeeping)';
+        roleTitle = 'Housekeeping Supervisor';
+      } else {
+        return { success: false, error: 'Incorrect Staff PIN. Use 1234 (Owner), 2222 (Reception), 3333 (Kitchen), 4444 (Delivery), 5555 (Housekeeping).' };
       }
-      return { success: false, error: 'Incorrect PIN or Password.' };
+
+      const dummyToken = 'offline-token-' + Date.now();
+      const newSession = { role, staffName, roleTitle, permissions: ['ALL'] };
+      setAdminToken(dummyToken);
+      setIsAdminAuthenticated(true);
+      setStaffSession(newSession);
+      localStorage.setItem(STORAGE_KEYS.ADMIN_TOKEN, dummyToken);
+      localStorage.setItem(STORAGE_KEYS.STAFF_SESSION, JSON.stringify(newSession));
+      showToast(`Welcome back, ${staffName} (${roleTitle})!`, 'success');
+      playNotificationChime();
+      return { success: true, session: newSession };
     }
   };
 
@@ -472,8 +627,10 @@ export const HotelProvider = ({ children }) => {
     } catch {}
     setAdminToken('');
     setIsAdminAuthenticated(false);
+    setStaffSession({ role: 'owner', staffName: 'Guest Staff', roleTitle: 'None' });
     localStorage.removeItem(STORAGE_KEYS.ADMIN_TOKEN);
-    showToast('Logged out of Owner Command Center.', 'info');
+    localStorage.removeItem(STORAGE_KEYS.STAFF_SESSION);
+    showToast('Logged out of Staff Work Desk.', 'info');
   };
 
   // --- ADMIN LIVE ACTIONS (Synced across all devices) ---
@@ -740,6 +897,187 @@ export const HotelProvider = ({ children }) => {
     return newEnquiry;
   };
 
+  // --- ERP SUITE ACTIONS: RAW INVENTORY, EXPENSES, TASKS, STAFF, HOUSEKEEPING ---
+  const addStockPurchase = async ({ itemId, addedQty, purchaseCost, updatedBy, paidVia = 'Cash' }) => {
+    let updatedItemName = 'Stock';
+    setRawInventory((prev) =>
+      prev.map((item) => {
+        if (item.id === itemId) {
+          updatedItemName = item.name;
+          const newQty = (parseFloat(item.currentStock) || 0) + (parseFloat(addedQty) || 0);
+          return {
+            ...item,
+            currentStock: Math.max(0, Math.round(newQty * 10) / 10),
+            lastUpdated: 'Just now',
+            updatedBy: updatedBy || staffSession?.staffName || 'Staff'
+          };
+        }
+        return item;
+      })
+    );
+
+    if (purchaseCost && parseFloat(purchaseCost) > 0) {
+      const newExp = {
+        id: `EXP-${Date.now().toString().slice(-4)}`,
+        date: new Date().toISOString().split('T')[0],
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        item: `${updatedItemName} Purchase (+${addedQty})`,
+        category: 'Kitchen Raw Stock',
+        amount: parseFloat(purchaseCost),
+        paidVia,
+        loggedBy: updatedBy || staffSession?.staffName || 'Staff'
+      };
+      setExpenses((prev) => [newExp, ...prev]);
+    }
+    showToast(`Stock added for ${updatedItemName}! Expense logged.`, 'success');
+
+    try {
+      await adminFetch('/api/inventory/purchase', {
+        method: 'POST',
+        body: JSON.stringify({ itemId, addedQty, purchaseCost, updatedBy: updatedBy || staffSession?.staffName, paidVia })
+      });
+    } catch (err) {
+      console.warn('Backend stock purchase sync failed:', err);
+    }
+  };
+
+  const useStock = async ({ itemId, usedQty, updatedBy }) => {
+    let itemName = 'Stock';
+    setRawInventory((prev) =>
+      prev.map((item) => {
+        if (item.id === itemId) {
+          itemName = item.name;
+          const newQty = Math.max(0, (parseFloat(item.currentStock) || 0) - (parseFloat(usedQty) || 0));
+          return {
+            ...item,
+            currentStock: Math.round(newQty * 10) / 10,
+            lastUpdated: 'Just now',
+            updatedBy: updatedBy || staffSession?.staffName || 'Staff'
+          };
+        }
+        return item;
+      })
+    );
+    showToast(`Updated usage for ${itemName}!`, 'info');
+
+    try {
+      await adminFetch('/api/inventory/use', {
+        method: 'POST',
+        body: JSON.stringify({ itemId, usedQty, updatedBy: updatedBy || staffSession?.staffName })
+      });
+    } catch (err) {
+      console.warn('Backend stock use sync failed:', err);
+    }
+  };
+
+  const addExpense = async (expenseData) => {
+    const newExpense = {
+      ...expenseData,
+      id: `EXP-${Date.now().toString().slice(-4)}`,
+      date: expenseData.date || new Date().toISOString().split('T')[0],
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      amount: parseFloat(expenseData.amount) || 0,
+      loggedBy: expenseData.loggedBy || staffSession?.staffName || 'Staff'
+    };
+    setExpenses((prev) => [newExpense, ...prev]);
+    showToast(`Expense of ₹${newExpense.amount} logged!`, 'success');
+
+    try {
+      await adminFetch('/api/expenses', {
+        method: 'POST',
+        body: JSON.stringify(newExpense)
+      });
+    } catch (err) {
+      console.warn('Backend expense sync failed:', err);
+    }
+  };
+
+  const toggleTask = async (taskId, completedBy) => {
+    setTasks((prev) =>
+      prev.map((t) => {
+        if (t.id === taskId) {
+          const nextVal = !t.completed;
+          return {
+            ...t,
+            completed: nextVal,
+            completedBy: nextVal ? (completedBy || staffSession?.staffName || 'Staff') : null,
+            completedAt: nextVal ? 'Just now' : null
+          };
+        }
+        return t;
+      })
+    );
+    showToast(`Task status updated!`, 'info');
+
+    try {
+      await adminFetch(`/api/tasks/${taskId}/toggle`, {
+        method: 'PUT',
+        body: JSON.stringify({ completedBy: completedBy || staffSession?.staffName })
+      });
+    } catch (err) {
+      console.warn('Backend task toggle failed:', err);
+    }
+  };
+
+  const addTask = async (taskData) => {
+    const newTask = {
+      ...taskData,
+      id: `TSK-${Date.now().toString().slice(-4)}`,
+      completed: false,
+      completedBy: null,
+      completedAt: null
+    };
+    setTasks((prev) => [...prev, newTask]);
+    showToast(`New task added: "${newTask.title}"!`, 'success');
+
+    try {
+      await adminFetch('/api/tasks', {
+        method: 'POST',
+        body: JSON.stringify(newTask)
+      });
+    } catch (err) {
+      console.warn('Backend task creation failed:', err);
+    }
+  };
+
+  const updateStaff = async (staffMember) => {
+    setStaff((prev) => {
+      const idx = prev.findIndex((s) => s.id === staffMember.id);
+      if (idx >= 0) {
+        return prev.map((s) => (s.id === staffMember.id ? { ...s, ...staffMember } : s));
+      }
+      return [...prev, { ...staffMember, id: staffMember.id || `STF-${Date.now().toString().slice(-3)}` }];
+    });
+    showToast(`Staff member updated!`, 'success');
+
+    try {
+      await adminFetch('/api/admin/update', {
+        method: 'POST',
+        body: JSON.stringify({ type: 'UPDATE_STAFF', payload: staffMember })
+      });
+    } catch (err) {
+      console.warn('Backend staff update failed:', err);
+    }
+  };
+
+  const updateHousekeeping = async (roomNumber, cleaningStatus) => {
+    setPhysicalRooms((prev) =>
+      prev.map((r) =>
+        r.roomNumber === roomNumber ? { ...r, cleaningStatus } : r
+      )
+    );
+    showToast(`Room ${roomNumber} marked as ${cleaningStatus}!`, 'info');
+
+    try {
+      await adminFetch('/api/rooms/housekeeping', {
+        method: 'PUT',
+        body: JSON.stringify({ roomNumber, cleaningStatus })
+      });
+    } catch (err) {
+      console.warn('Backend housekeeping update failed:', err);
+    }
+  };
+
   const resetToDefaults = async () => {
     setMenu(INITIAL_MENU);
     setRooms(INITIAL_ROOMS);
@@ -747,6 +1085,10 @@ export const HotelProvider = ({ children }) => {
     setSettings(INITIAL_SETTINGS);
     setOrders(SAMPLE_ORDERS);
     setBookings(SAMPLE_ROOM_BOOKINGS);
+    setStaff(DEFAULT_STAFF_MEMBERS);
+    setRawInventory(INITIAL_RAW_INVENTORY);
+    setExpenses(INITIAL_EXPENSES);
+    setTasks(INITIAL_TASKS);
     localStorage.clear();
 
     try {
@@ -774,6 +1116,14 @@ export const HotelProvider = ({ children }) => {
         toast,
         showToast,
         isCloudSynced,
+        // ERP Multi-Role Ecosystem & Data
+        staffRoles: STAFF_ROLES,
+        staff,
+        rawInventory,
+        expenses,
+        tasks,
+        staffSession,
+        setStaffSession,
         // Admin Auth
         isAdminAuthenticated,
         adminLogin,
@@ -796,7 +1146,15 @@ export const HotelProvider = ({ children }) => {
         addRoomBooking,
         updateRoomBookingStatus,
         addEventEnquiry,
-        resetToDefaults
+        resetToDefaults,
+        // ERP Specific Actions
+        addStockPurchase,
+        useStock,
+        addExpense,
+        toggleTask,
+        addTask,
+        updateStaff,
+        updateHousekeeping
       }}
     >
       {children}
