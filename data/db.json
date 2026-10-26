@@ -1627,6 +1627,22 @@
   ],
   "visitors": [
     {
+      "id": "vis_1793016351928_kqauw",
+      "timestamp": "2026-10-26T12:05:51.928Z",
+      "page": "MENU",
+      "deviceType": "Desktop",
+      "referrer": "Direct",
+      "isReturning": true
+    },
+    {
+      "id": "vis_1793016351896_v9yh5",
+      "timestamp": "2026-10-26T12:05:51.896Z",
+      "page": "MENU",
+      "deviceType": "Desktop",
+      "referrer": "Direct",
+      "isReturning": false
+    },
+    {
       "id": "vis_1793014446859_aoe0k",
       "timestamp": "2026-10-26T11:34:06.859Z",
       "page": "ADMIN",
@@ -1652,17 +1668,17 @@
     }
   ],
   "visitorStats": {
-    "totalLifetimeVisitors": 1251,
-    "todayVisitors": 89,
-    "thisMonthVisitors": 943,
+    "totalLifetimeVisitors": 1253,
+    "todayVisitors": 91,
+    "thisMonthVisitors": 945,
     "lastUpdatedDate": "2026-10-26",
     "devices": {
       "mobile": 781,
-      "desktop": 470
+      "desktop": 472
     },
     "pageViews": {
       "home": 1248,
-      "menu": 890,
+      "menu": 892,
       "rooms": 640,
       "events": 210,
       "rooms 101-304": 1,
@@ -1679,7 +1695,7 @@
       "totalStays": 1,
       "totalEvents": 0,
       "totalSpend": 5998,
-      "lastVisitDate": "2026-10-26T11:22:41.839Z",
+      "lastVisitDate": "2026-10-26T12:05:46.867Z",
       "customerType": "⭐ Frequent Diner"
     },
     {
@@ -1691,7 +1707,7 @@
       "totalStays": 1,
       "totalEvents": 0,
       "totalSpend": 3998,
-      "lastVisitDate": "2026-10-26T11:22:41.839Z",
+      "lastVisitDate": "2026-10-26T12:05:46.867Z",
       "customerType": "⭐ Frequent Diner"
     },
     {
@@ -1703,7 +1719,7 @@
       "totalStays": 0,
       "totalEvents": 0,
       "totalSpend": 1140,
-      "lastVisitDate": "2026-10-26T11:22:41.839Z",
+      "lastVisitDate": "2026-10-26T12:05:46.867Z",
       "customerType": "🌱 New Customer"
     },
     {
@@ -1715,7 +1731,7 @@
       "totalStays": 0,
       "totalEvents": 0,
       "totalSpend": 620,
-      "lastVisitDate": "2026-10-26T11:22:41.839Z",
+      "lastVisitDate": "2026-10-26T12:05:46.867Z",
       "customerType": "🌱 New Customer"
     },
     {
@@ -1727,7 +1743,7 @@
       "totalStays": 0,
       "totalEvents": 0,
       "totalSpend": 610,
-      "lastVisitDate": "2026-10-26T11:22:41.839Z",
+      "lastVisitDate": "2026-10-26T12:05:46.867Z",
       "customerType": "🌱 New Customer"
     }
   ],
