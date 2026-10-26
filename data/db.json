@@ -20,7 +20,7 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Classic Royal Dum Biryani infused with whole cardamom, cloves, succulent chicken cuts, served with raita and gravy.",
-      "image": "/images/food/biryani.jpg"
+      "image": "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "bir-3",
@@ -31,7 +31,7 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Tender goat meat slow-simmered with aromatic saffron rice, rose water, and royal Awadhi spices.",
-      "image": "/images/food/biryani.jpg"
+      "image": "https://images.unsplash.com/photo-1633945274405-b6c8069047b0?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "bir-4",
@@ -42,7 +42,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Aromatic basmati rice layered with crispy golden-fried spiced eggs and caramelized onions.",
-      "image": "/images/food/biryani.jpg"
+      "image": "https://images.unsplash.com/photo-1589302168068-964664d93dc0?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "bir-5",
@@ -53,7 +53,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Fresh garden vegetables, soft paneer cubes, and aromatic whole spices cooked in aged basmati rice.",
-      "image": "/images/food/biryani.jpg"
+      "image": "https://images.unsplash.com/photo-1642821373181-696a54913e9a?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "bir-6",
@@ -64,7 +64,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Crispy Bengali & Assamese style spiced mashed potato croquettes stuffed with seasoned boiled eggs.",
-      "image": "/images/food/biryani.jpg"
+      "image": "https://images.unsplash.com/photo-1582169296194-e4d644c48063?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "chk-1",
@@ -75,7 +75,7 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Rich and royal cashew nut, poppy seed, and fresh cream gravy with succulent boneless chicken morsels.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "chk-2",
@@ -86,7 +86,7 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Delicate Mughlai specialty cooked in silky saffron, almond paste, and green cardamom sauce.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "chk-3",
@@ -97,7 +97,7 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Authentic Assamese country-style local chicken curry cooked with mustard oil, potatoes, and native ginger-garlic.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "chk-4",
@@ -108,7 +108,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Spicy and tangy green masala curry made with fresh mint, coriander, brown onions, and green chillies.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1610057099431-d73a1c9d2f2f?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "chk-5",
@@ -119,7 +119,7 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Crispy fried chicken strips wok-tossed in fiery red dragon sauce with bell peppers and roasted cashews.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1562967914-608f82629710?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "chk-6",
@@ -130,7 +130,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Juicy chicken legs marinated in rich yogurt-spice marinade, grilled to perfection.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1599488615731-7e5c2823ff28?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "chk-7",
@@ -141,7 +141,7 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Crunchy double-battered golden fried chicken pieces served with spicy dip and mayo.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "chk-8",
@@ -152,7 +152,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Panko breadcrumb-crusted chicken tenders fried golden and crisp.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1562967916-eb82221dfb92?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "chk-9",
@@ -163,7 +163,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Minced chicken patty spiced with herbs and pan-fried with a crunchy exterior.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1541832676-9b763b0239ab?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "chk-10",
@@ -174,7 +174,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Tender chicken bite-sized nuggets served with tangy tomato garlic dip.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "str-1",
@@ -185,7 +185,7 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Iconic Indo-Chinese dish of crispy chicken tossed with green chillies, onions, capsicum, and dark soya sauce.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1525755662778-989d0524087e?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "str-2",
@@ -196,7 +196,7 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Frenched chicken winglets tossed in spicy Schezwan sauce or served crispy with spicy garlic dip.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1567620832903-9fc6debc209f?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "str-3",
@@ -207,7 +207,7 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Crunchy batter-fried chicken supreme glazed in our chef's signature sweet & spicy honey garlic glaze.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1569058242253-92a9c755a0ec?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "str-4",
@@ -218,7 +218,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Assam highway dhaba style shallow-fried spicy chicken morsels with slit chillies.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1610057099431-d73a1c9d2f2f?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "str-5",
@@ -229,7 +229,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Tender boneless chicken coated in seasoned gram flour batter and deep-fried till crunchy.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "str-6",
@@ -240,7 +240,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Crispy chicken tossed with cracked black peppercorns, roasted garlic, and spring onion greens.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1562967914-608f82629710?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "str-7",
@@ -251,7 +251,7 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Thick slices of fresh cottage cheese sandwiching mint chutney, battered and fried golden.",
-      "image": "/images/food/paneer.jpg"
+      "image": "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "str-8",
@@ -262,7 +262,7 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Tender baby corn golden fried and tossed in sweet, spicy, and tangy chilli garlic sauce.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "str-9",
@@ -273,7 +273,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Crispy sweet corn kernels wok-tossed with freshly crushed pepper, sea salt, and scallions.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1551782450-a2132b4ba21d?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "str-10",
@@ -284,7 +284,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Crisp seasonal vegetable fritters served hot with tangy tamarind and mint chutneys.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1606491956689-2ea866880c84?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "str-11",
@@ -295,7 +295,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Crispy salted potato fries served with ketchup and spicy mayonnaise.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1576107232684-1279f3908594?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "rol-1",
@@ -306,7 +306,7 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Crispy golden rolled pastry filled with minced spiced chicken, shredded cabbage, and carrots.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "rol-2",
@@ -317,7 +317,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Crispy spring rolls stuffed with seasoned scrambled eggs and wok-tossed vegetables.",
-      "image": "/images/food/rolls.jpg"
+      "image": "https://images.unsplash.com/photo-1548946526-f69e2424cf45?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "rol-3",
@@ -328,7 +328,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Thin flaky wrapper stuffed with crunchy julienned vegetables and oriental seasoning.",
-      "image": "/images/food/rolls.jpg"
+      "image": "https://images.unsplash.com/photo-1541832676-9b763b0239ab?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "rol-4",
@@ -339,7 +339,7 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Crispy paratha coated with two eggs, filled with smoky spiced chicken tikka, sliced onions, and lime.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "mom-1",
@@ -350,7 +350,7 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Steamed chicken momos pan-seared to a crispy bottom and tossed in spicy Schezwan garlic sauce.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "mom-2",
@@ -361,7 +361,7 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Handcrafted Tibetan dumplings filled with juicy minced chicken, served with spicy red chutney and clear broth.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "mom-3",
@@ -372,7 +372,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Veg dumplings crisped on the pan and tossed in spicy garlic chilli sauce.",
-      "image": "/images/food/momos.jpg"
+      "image": "https://images.unsplash.com/photo-1498654896293-37aacf113fd9?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "mom-4",
@@ -383,7 +383,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Delicate steamed dumplings stuffed with finely minced fresh garden vegetables and herbs.",
-      "image": "/images/food/momos.jpg"
+      "image": "https://images.unsplash.com/photo-1541696432-82c6da8ce7bf?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "ric-1",
@@ -394,7 +394,7 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Wok-tossed basmati rice with diced seasoned chicken, egg ribbons, and spring onions.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "ric-2",
@@ -405,7 +405,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Classic Chinese wok rice tossed with scrambled egg and garden fresh vegetables.",
-      "image": "/images/food/chinese.jpg"
+      "image": "https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "ric-3",
@@ -416,7 +416,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Steamed rice stir-fried with diced carrots, beans, baby corn, and light soy sauce.",
-      "image": "/images/food/chinese.jpg"
+      "image": "https://images.unsplash.com/photo-1563245372-f21724e3856d?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "ric-4",
@@ -427,7 +427,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Fragrant basmati rice gently spiced with whole cloves, bay leaves, cardamom, and green peas.",
-      "image": "/images/food/chinese.jpg"
+      "image": "https://images.unsplash.com/photo-1596797038530-2c107229654b?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "ric-5",
@@ -438,7 +438,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Fluffy basmati rice tempered with roasted cumin seeds and fresh desi ghee.",
-      "image": "/images/food/chinese.jpg"
+      "image": "https://images.unsplash.com/photo-1516714435131-44d6b64dc6a2?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "ric-6",
@@ -449,7 +449,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Premium aromatic long-grain steamed rice.",
-      "image": "/images/food/chinese.jpg"
+      "image": "https://images.unsplash.com/photo-1536304993881-ff6e9eefa2a6?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "nod-1",
@@ -460,7 +460,7 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Spicy wok noodles tossed with burnt garlic, red chillies, shredded chicken, and scallions.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1552611052-33e04de081de?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "nod-2",
@@ -471,7 +471,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Noodles tossed with shredded chicken in spicy house Schezwan pepper paste.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1585032226651-759b368d7246?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "nod-3",
@@ -482,7 +482,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Traditional Kolkata style Hakka noodles tossed with sliced chicken and crisp veggies.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1612927601601-6638404737ce?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "nod-4",
@@ -493,7 +493,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Spicy Schezwan noodles stir-fried with scrambled eggs and bell peppers.",
-      "image": "/images/food/chinese.jpg"
+      "image": "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "nod-5",
@@ -504,7 +504,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Mild, fragrant noodles stir-fried with shredded cabbage, carrots, capsicum, and celery.",
-      "image": "/images/food/chinese.jpg"
+      "image": "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "veg-1",
@@ -515,7 +515,7 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Soft cottage cheese cubes simmered in velvety tomato, cashew, and cream gravy flavored with kasuri methi.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "veg-2",
@@ -526,7 +526,7 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Paneer cubes, bell peppers, and onions tossed in freshly roasted kadhai coriander & red chilli masala.",
-      "image": "/images/food/paneer.jpg"
+      "image": "https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "veg-3",
@@ -537,7 +537,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Classic North Indian homestyle preparation of tender green peas and paneer in rich onion gravy.",
-      "image": "/images/food/paneer.jpg"
+      "image": "https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "veg-4",
@@ -548,7 +548,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Batter-fried paneer cubes tossed with capsicum and diced onions in tangy chilli soy gravy.",
-      "image": "/images/food/paneer.jpg"
+      "image": "https://images.unsplash.com/photo-1525755662778-989d0524087e?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "veg-5",
@@ -559,7 +559,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Fresh button mushrooms cooked in thick roasted onion, tomato, and ground garam masala gravy.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "veg-6",
@@ -570,7 +570,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Crispy button mushrooms tossed in spicy Indo-Chinese chilli garlic sauce.",
-      "image": "/images/food/paneer.jpg"
+      "image": "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "veg-7",
@@ -581,7 +581,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Crispy vegetable dumplings in savoury garlic, ginger, and soy sauce.",
-      "image": "/images/food/paneer.jpg"
+      "image": "https://images.unsplash.com/photo-1541832676-9b763b0239ab?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "veg-8",
@@ -592,7 +592,7 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Yellow toor dal tempered with cumin seeds, garlic, dry red chillies, and pure desi ghee.",
-      "image": "/images/food/paneer.jpg"
+      "image": "https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "veg-9",
@@ -603,7 +603,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Comforting yellow lentils cooked with sautéed onions, tomatoes, and fresh coriander.",
-      "image": "/images/food/paneer.jpg"
+      "image": "https://images.unsplash.com/photo-1585937421612-70a008356fbe?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "mcn-1",
@@ -625,7 +625,7 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Slow-roasted chicken cooked with browned onions, garlic, and rustic Assamese spices till thick and dark.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1606471191009-63994c53433b?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "mcn-3",
@@ -636,7 +636,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Tender chicken cooked with double the onions — sautéed paste plus crunchy caramelized petals.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "mcn-4",
@@ -647,7 +647,7 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Slow-cooked succulent mutton roasted in mustard oil and aromatic spices for hours till tender.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "mcn-5",
@@ -658,7 +658,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Traditional Bengali & Assamese Sunday style mutton jhol with tender potatoes.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "mcn-6",
@@ -669,7 +669,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Golden pan-fried boiled eggs cooked in rich spicy onion tomato gravy.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1589302168068-964664d93dc0?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "fsh-1",
@@ -680,7 +680,7 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Fresh river fish steaks fried crisp and simmered in light mustard seed, cumin, and turmeric curry.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "fsh-2",
@@ -691,7 +691,7 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Fresh local fish fillets marinated in spices, pan-fried to a crunchy crust with onions.",
-      "image": "/images/food/fish.jpg"
+      "image": "https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "fsh-3",
@@ -702,7 +702,7 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Assamese delicacy of tender freshwater small fish pan-crisped with slit green chillies and salt.",
-      "image": "/images/food/fish.jpg"
+      "image": "https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "tan-1",
@@ -724,7 +724,7 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Smoky boneless chicken chunks char-grilled over live embers, served with mint dip.",
-      "image": "/images/food/tandoori.jpg"
+      "image": "https://images.unsplash.com/photo-1599488615731-7e5c2823ff28?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "tan-3",
@@ -735,7 +735,7 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Melt-in-mouth chicken cubes marinated in heavy cream, processed cheese, and aromatic green cardamom.",
-      "image": "/images/food/tandoori.jpg"
+      "image": "https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "tan-4",
@@ -746,7 +746,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Mild creamy charcoal grilled chicken flavored with roasted cashews and white pepper.",
-      "image": "/images/food/tandoori.jpg"
+      "image": "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "tan-5",
@@ -757,7 +757,7 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Finely minced seasoned mutton skewered and roasted over burning charcoal.",
-      "image": "/images/food/tandoori.jpg"
+      "image": "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "tan-6",
@@ -768,7 +768,7 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Fresh cottage cheese cubes, capsicum, and onions marinated in ajwain tandoori masala and roasted.",
-      "image": "/images/food/tandoori.jpg"
+      "image": "https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "siz-1",
@@ -779,7 +779,7 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Sizzling hot cast iron platter loaded with chicken steak, sausages, butter rice, fries, and smoky garlic pepper sauce.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "siz-2",
@@ -790,7 +790,7 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Juicy roasted chicken breast served over sizzling bed of butter noodles with sauteed vegetables.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "brd-1",
@@ -801,7 +801,7 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Soft, pillowy refined flour bread baked in tandoor and brushed generously with desi butter.",
-      "image": "/images/food/breads.jpg"
+      "image": "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "brd-2",
@@ -812,7 +812,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Crispy whole wheat bread baked against the clay walls of our tandoor with fresh butter.",
-      "image": "/images/food/tandoori.jpg"
+      "image": "https://images.unsplash.com/photo-1509722747041-616f39b57569?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "brd-3",
@@ -823,7 +823,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Homestyle soft puffed whole wheat flatbread made on tawa, brushed with pure butter.",
-      "image": "/images/food/breads.jpg"
+      "image": "https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "brd-4",
@@ -834,7 +834,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Simple healthy whole wheat roti baked fresh to order.",
-      "image": "/images/food/breads.jpg"
+      "image": "https://images.unsplash.com/photo-1509722747041-616f39b57569?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "bev-1",
@@ -845,7 +845,7 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Trio of vanilla, chocolate, and butterscotch ice creams topped with crunchy nuts and chocolate syrup.",
-      "image": "/images/food/desserts.jpg"
+      "image": "https://images.unsplash.com/photo-1563805042-7684c019e1cb?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "bev-2",
@@ -856,7 +856,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Rich, dense double chocolate ice cream scoop.",
-      "image": "/images/food/desserts.jpg"
+      "image": "https://images.unsplash.com/photo-1570197788417-0e82375c9371?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "bev-3",
@@ -867,7 +867,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Smooth cream with crunchy caramel cashew praline.",
-      "image": "/images/food/desserts.jpg"
+      "image": "https://images.unsplash.com/photo-1501443762994-82bd5dace89a?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "bev-4",
@@ -878,7 +878,7 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Premium strong Assam CTC tea brewed with crushed ginger, green cardamom, and fresh creamy milk.",
-      "image": "/images/food/chicken_curry.jpg"
+      "image": "https://images.unsplash.com/photo-1576092768241-dec231879fc3?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "bev-5",
@@ -889,7 +889,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Steaming hot aromatic frothy milk coffee.",
-      "image": "/images/food/desserts.jpg"
+      "image": "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=600&q=80"
     },
     {
       "id": "bev-6",
@@ -900,7 +900,7 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Chilled sparkling soda with freshly squeezed Barpeta lemons and roasted cumin.",
-      "image": "/images/food/desserts.jpg"
+      "image": "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=600&q=80"
     }
   ],
   "rooms": [
@@ -1708,6 +1708,6 @@
     }
   },
   "customers": [],
-  "version": 1793024150168,
+  "version": 1793024719175,
   "roomBookings": []
 }
