@@ -370,7 +370,23 @@ export const INITIAL_ROOMS = [
   }
 ];
 
-export const INITIAL_MENU = [
+export const getDishImage = (category = '', name = '') => {
+  const cat = String(category || '').toLowerCase();
+  const n = String(name || '').toLowerCase();
+  if (cat.includes('biryani') || n.includes('biryani')) return '/images/food/biryani.jpg';
+  if (cat.includes('tandoori') || cat.includes('kebab') || n.includes('tikka') || n.includes('kebab') || n.includes('tandoori')) return '/images/food/tandoori.jpg';
+  if (cat.includes('chicken') || n.includes('chicken') || n.includes('curry') || n.includes('makhani') || n.includes('masala')) return '/images/food/chicken_curry.jpg';
+  if (cat.includes('momo') || n.includes('momo')) return '/images/food/momos.jpg';
+  if (cat.includes('roll') || n.includes('roll')) return '/images/food/rolls.jpg';
+  if (cat.includes('fish') || cat.includes('seafood') || n.includes('fish') || n.includes('prawn') || n.includes('rohu') || n.includes('bhakua')) return '/images/food/fish.jpg';
+  if (cat.includes('paneer') || cat.includes('veg') || n.includes('paneer') || n.includes('dal') || n.includes('mushroom') || n.includes('aloo')) return '/images/food/paneer.jpg';
+  if (cat.includes('rice') || cat.includes('noodle') || cat.includes('chowmein') || cat.includes('fried rice') || n.includes('rice') || n.includes('noodle')) return '/images/food/chinese.jpg';
+  if (cat.includes('bread') || cat.includes('roti') || cat.includes('naan') || n.includes('naan') || n.includes('paratha') || n.includes('kulcha')) return '/images/food/breads.jpg';
+  if (cat.includes('dessert') || cat.includes('beverage') || n.includes('jamun') || n.includes('shake') || n.includes('chai') || n.includes('tea') || n.includes('coffee')) return '/images/food/desserts.jpg';
+  return '/images/food/chicken_curry.jpg';
+};
+
+const RAW_MENU = [
   // --- BIRIYANI ---
   {
     id: "bir-1",
@@ -1218,6 +1234,11 @@ export const INITIAL_MENU = [
   }
 ];
 
+export const INITIAL_MENU = RAW_MENU.map(item => ({
+  ...item,
+  image: item.image || getDishImage(item.category, item.name)
+}));
+
 export const INITIAL_EVENTS = [
   {
     id: "bday",
@@ -1277,111 +1298,9 @@ export const FAQ_DATA = [
   }
 ];
 
-export const SAMPLE_ORDERS = [
-  {
-    id: "JNK-8421",
-    time: "Today, 8:45 PM",
-    customerName: "Rituraj Das",
-    phone: "9864012345",
-    mode: "Home Delivery",
-    address: "Near Barpeta Satra, Ward 4, Barpeta Town",
-    distanceKm: 3.8,
-    deliveryFee: 0,
-    items: [
-      { name: "Jonak Special Dum Biriyani", qty: 2, price: 350 },
-      { name: "Chicken Lollipop (6 Pcs)", qty: 1, price: 300 },
-      { name: "Butter Tandoori Roti", qty: 4, price: 35 }
-    ],
-    total: 1140,
-    payment: "UPI",
-    status: "Out for Delivery"
-  },
-  {
-    id: "JNK-8422",
-    time: "Today, 9:10 PM",
-    customerName: "Bikash Sarma",
-    phone: "9101234567",
-    mode: "In-Room Dining",
-    roomNumber: "Room 204 (Deluxe AC)",
-    distanceKm: 0,
-    deliveryFee: 0,
-    items: [
-      { name: "Chicken Kosa (Assamese Style)", qty: 1, price: 360 },
-      { name: "Butter Naan", qty: 3, price: 60 },
-      { name: "Assam Special Milk Masala Chai", qty: 2, price: 40 }
-    ],
-    total: 620,
-    payment: "Cash on Delivery",
-    status: "Confirmed"
-  },
-  {
-    id: "JNK-8420",
-    time: "Today, 7:30 PM",
-    customerName: "Anamika Medhi",
-    phone: "7002345678",
-    mode: "Home Delivery",
-    address: "Doctor Quarters, FAAMCH Campus, Barpeta",
-    distanceKm: 4.2,
-    deliveryFee: 0,
-    items: [
-      { name: "Paneer Butter Masala", qty: 1, price: 300 },
-      { name: "Jeera Rice", qty: 1, price: 120 },
-      { name: "Crispy Chilli Babycorn", qty: 1, price: 190 }
-    ],
-    total: 610,
-    payment: "UPI",
-    status: "Delivered"
-  }
-];
+export const SAMPLE_ORDERS = [];
 
-export const SAMPLE_ROOM_BOOKINGS = [
-  {
-    id: "BKG-1092",
-    time: "Today, 6:15 PM",
-    guestName: "Dr. Himanta Baishya",
-    phone: "9435098765",
-    roomType: "Deluxe Room (A/C)",
-    roomId: "deluxe-ac",
-    roomNumber: "201",
-    floor: "2nd Floor",
-    checkIn: "2026-10-25",
-    checkOut: "2026-10-27",
-    nights: 2,
-    guests: "2 Adults",
-    totalTariff: 5250,
-    status: "Confirmed",
-    idType: "Aadhaar Card",
-    idNumber: "5412 8763 9021",
-    maskedId: "XXXX-XXXX-9021",
-    kycStatus: "Verified",
-    guestCity: "Barpeta Satra, Barpeta",
-    aadhaarFront: null,
-    aadhaarBack: null
-  },
-  {
-    id: "BKG-1093",
-    time: "Today, 8:02 PM",
-    guestName: "Pranab Kalita",
-    phone: "9854123490",
-    roomType: "Suite Room (A/C)",
-    roomId: "suite-ac",
-    roomNumber: "101",
-    floor: "1st Floor",
-    checkIn: "2026-10-26",
-    checkOut: "2026-10-28",
-    nights: 2,
-    guests: "2 Adults",
-    totalTariff: 10500,
-    status: "New",
-    idType: "Aadhaar Card",
-    idNumber: "7823 4910 3218",
-    maskedId: "XXXX-XXXX-3218",
-    kycStatus: "Verified",
-    guestCity: "Guwahati, Assam",
-    aadhaarFront: null,
-    aadhaarBack: null
-  }
-];
+export const SAMPLE_ROOM_BOOKINGS = [];
 
 // ----------------------------------------------------------------------------
 // ERP SUITE: MULTI-ROLE STAFF ECOSYSTEM & PERMISSIONS

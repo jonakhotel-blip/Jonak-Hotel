@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useHotel } from '../context/HotelContext';
+import { getDishImage } from '../data/seedData';
 import { 
   Search, 
   Plus, 
@@ -332,38 +333,117 @@ export const MenuSection = ({ onOpenCart }) => {
                   key={dish.id}
                   className="glass-card"
                   style={{
-                    padding: '1.25rem',
+                    padding: '1rem',
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'space-between',
                     position: 'relative',
                     opacity: dish.inStock ? 1 : 0.65,
-                    border: dish.inStock ? '1px solid var(--border-subtle)' : '1px dashed rgba(239, 68, 68, 0.4)'
+                    border: dish.inStock ? '1px solid var(--border-subtle)' : '1px dashed rgba(239, 68, 68, 0.4)',
+                    transition: 'all 0.3s ease'
                   }}
                 >
                   <div>
-                    {/* Top Row: Type Indicator & Badges */}
+                    {/* Food Photography Banner */}
                     <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      marginBottom: '0.65rem'
+                      position: 'relative',
+                      width: '100%',
+                      height: '160px',
+                      borderRadius: '12px',
+                      overflow: 'hidden',
+                      marginBottom: '0.85rem',
+                      background: 'linear-gradient(135deg, #0E1626 0%, #172338 100%)'
                     }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                        <div className={`food-type-icon ${dish.isVeg ? 'veg' : 'non-veg'}`}>
-                          <div className="dot" />
+                      <img 
+                        src={dish.image || getDishImage(dish.category, dish.name)} 
+                        alt={dish.name}
+                        loading="lazy"
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          transition: 'transform 0.4s ease'
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.08)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1.0)'; }}
+                        onError={(e) => { e.currentTarget.src = '/images/food/biryani.jpg'; }}
+                      />
+
+                      {/* Veg / Non-Veg Floating Badge */}
+                      <div style={{
+                        position: 'absolute',
+                        top: '8px',
+                        left: '8px',
+                        background: 'rgba(7, 11, 20, 0.82)',
+                        backdropFilter: 'blur(8px)',
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        border: '1px solid rgba(255,255,255,0.1)'
+                      }}>
+                        <div className={`food-type-icon ${dish.isVeg ? 'veg' : 'non-veg'}`} style={{ width: '13px', height: '13px' }}>
+                          <div className="dot" style={{ width: '5px', height: '5px' }} />
                         </div>
-                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-                          {dish.category}
+                        <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#fff', letterSpacing: '0.5px' }}>
+                          {dish.isVeg ? 'VEG' : 'NON-VEG'}
                         </span>
                       </div>
 
+                      {/* Best Seller / Chef Special Floating Badge */}
                       {dish.bestSeller && (
-                        <span className="badge badge-gold" style={{ fontSize: '0.68rem', padding: '0.2rem 0.5rem' }}>
-                          <Flame size={11} fill="#F59E0B" color="#F59E0B" />
-                          <span>Best Seller</span>
-                        </span>
+                        <div style={{
+                          position: 'absolute',
+                          top: '8px',
+                          right: '8px',
+                          background: 'linear-gradient(135deg, #D4AF37 0%, #B8860B 100%)',
+                          color: '#070B14',
+                          padding: '3px 8px',
+                          borderRadius: '20px',
+                          fontSize: '0.66rem',
+                          fontWeight: 800,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.5)'
+                        }}>
+                          <Flame size={11} fill="#070B14" color="#070B14" />
+                          <span>CHEF SPECIAL</span>
+                        </div>
                       )}
+
+                      {/* Sold Out Overlay */}
+                      {!dish.inStock && (
+                        <div style={{
+                          position: 'absolute',
+                          inset: 0,
+                          background: 'rgba(7, 11, 20, 0.85)',
+                          backdropFilter: 'blur(3px)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#EF4444',
+                          fontWeight: 800,
+                          fontSize: '0.85rem',
+                          letterSpacing: '1px'
+                        }}>
+                          SOLD OUT
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Category Label */}
+                    <div style={{ marginBottom: '0.35rem' }}>
+                      <span style={{ 
+                        fontSize: '0.72rem', 
+                        color: 'var(--gold-primary)', 
+                        textTransform: 'uppercase',
+                        fontWeight: 600,
+                        letterSpacing: '0.5px'
+                      }}>
+                        {dish.category}
+                      </span>
                     </div>
 
                     {/* Dish Name */}
