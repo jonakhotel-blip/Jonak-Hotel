@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://jonakhotelgroup.in/sitemap.xml
