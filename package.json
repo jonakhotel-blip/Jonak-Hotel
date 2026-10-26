@@ -8,7 +8,9 @@
     "server": "node server.js",
     "build": "vite build",
     "preview": "vite preview",
-    "start": "node server.js"
+    "start": "node server.js",
+    "pocketbase": "pocketbase\\pocketbase.exe serve --http=127.0.0.1:8090 --dir=./pocketbase/pb_data",
+    "pb:setup": "node scripts/setup-pocketbase.mjs"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.4",
@@ -17,6 +19,7 @@
     "express": "^5.3.0",
     "lucide-react": "^1.16.0",
     "mongodb": "^7.7.0",
+    "pocketbase": "^0.28.1",
     "qrcode": "^1.5.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

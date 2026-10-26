@@ -36,3 +36,9 @@ Thumbs.db
 
 # Backup Files
 *.backup.json
+
+# PocketBase Local Binary & Temp Data
+pocketbase/*.exe
+pocketbase/*.zip
+pocketbase/pb_data/
+
