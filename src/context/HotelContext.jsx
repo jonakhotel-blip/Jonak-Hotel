@@ -1135,7 +1135,11 @@ export const HotelProvider = ({ children }) => {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setBookings(data.bookings || prev => prev.map(b => b.id === bookingId ? data.booking : b));
+        if (data.bookings) {
+          setBookings(data.bookings);
+        } else if (data.booking) {
+          setBookings((prev) => prev.map((b) => (b.id === bookingId ? data.booking : b)));
+        }
         showToast(status === 'Verified' ? `✅ KYC Approved for Booking #${bookingId}` : `❌ KYC Re-upload Requested`, status === 'Verified' ? 'success' : 'error');
         return { success: true, booking: data.booking };
       }

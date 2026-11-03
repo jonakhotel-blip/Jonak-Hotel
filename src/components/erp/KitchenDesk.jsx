@@ -237,7 +237,7 @@ export const KitchenDesk = () => {
       {/* ---------------------------------------------------------------------- */}
       {/* VIEW 1: LIVE KDS BOARD (3 COLUMNS)                                    */}
       {/* ---------------------------------------------------------------------- */}
-      {activeTab === 'KDS' ? (
+      {activeTab === 'KDS' && (
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
@@ -542,10 +542,12 @@ export const KitchenDesk = () => {
           </div>
 
         </div>
-      ) : (
-        /* ---------------------------------------------------------------------- */
-        /* VIEW 2: 1-TAP DISH STOCK-OUT SWITCHER                                  */
-        /* ---------------------------------------------------------------------- */
+      )}
+
+      {/* ---------------------------------------------------------------------- */}
+      {/* VIEW 2: 1-TAP DISH STOCK-OUT SWITCHER                                  */}
+      {/* ---------------------------------------------------------------------- */}
+      {activeTab === 'STOCK_CONTROL' && (
         <div className="glass-card" style={{ padding: '1.75rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
             <div>
@@ -636,7 +638,7 @@ export const KitchenDesk = () => {
             ))}
           </div>
         </div>
-      ) : null}
+      )}
 
       {/* ---------------------------------------------------------------------- */}
       {/* VIEW 3: RAW RATION & COMMERCIAL LPG CYLINDERS INVENTORY                */}

@@ -227,8 +227,6 @@ export const AdminPanel = ({ onExitAdmin }) => {
       setAuthError(result?.error || 'Invalid PIN. Please try again.');
     }
   };
-  const [authSuccess, setAuthSuccess] = useState('');
-  const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
 
   // MFA Challenge State
   const [mfaChallenge, setMfaChallenge] = useState(null); // { tempToken, email, role, mfaSetupRequired, totpUri, secret, recoveryCodes }
@@ -248,14 +246,6 @@ export const AdminPanel = ({ onExitAdmin }) => {
   const [inviteTokenInput, setInviteTokenInput] = useState('');
   const [inviteNameInput, setInviteNameInput] = useState('');
   const [invitePasswordInput, setInvitePasswordInput] = useState('');
-
-  // Active Admin Tab: default based on user role
-  const [activeTab, setActiveTab] = useState(() => {
-    const role = currentUser?.role || staffSession?.role || 'owner';
-    if (role === 'staff') return 'KITCHEN';
-    if (role === 'manager') return 'ROOMS';
-    return 'ANALYTICS';
-  });
 
   // Auto-fetch data for dynamic reports and notifications
   useEffect(() => {
