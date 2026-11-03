@@ -2,7 +2,8 @@
 
 export const HOTEL_INFO = {
   name: "Jonak Hotel & Restaurant",
-  tagline: "Royal Assamese Warmth meets 5-Star Hospitality",
+  tagline: "Authentic Assamese Warmth meets Premier Hospitality",
+  owner: "Shahidul Islam",
   phone: "+91 96785 82286",
   phoneRaw: "9678582286",
   whatsapp: "919678582286",
@@ -21,18 +22,57 @@ export const HOTEL_INFO = {
 
 export const INITIAL_SETTINGS = {
   kitchenOpen: true,
+  operatingHours: {
+    openTime: "10:30",
+    closeTime: "22:30",
+    autoSchedule: true
+  },
   freeDeliveryRadiusKm: 5,
   extraFeePerKm: 15,
   minOrderFreeDelivery: 199,
+  maxDeliveryRadiusKm: 15,
+  estimatedBaseMinutes: 35,
   announcementActive: true,
   announcementText: "🎉 Grand Weekend Special: 100% FREE Home Delivery across Barpeta (Within 5 KM) on all orders! Try our famous Dum Biryani & Local Chicken Curry.",
-  adminPin: "1234",
   gstPercent: 5,
   applyGst: true,
+  codEnabled: true,
+  razorpay: {
+    enabled: false,
+    mode: "sandbox",
+    keyId: "rzp_test_JonakSandboxDemo"
+  },
+  deliveryRules: {
+    freeRadiusKm: 5,
+    extraFeePerKm: 15,
+    minOrderFreeDelivery: 199,
+    maxDeliveryRadiusKm: 15,
+    estimatedBaseMinutes: 35
+  },
   upiId: "paytm.s1i7is2@pty",
   merchantName: "JONAK HOTEL AND RESTAURANT",
   paytmQrImage: "/images/jonak-paytm-qr.png"
 };
+
+export const INITIAL_OFFERS = [
+  {
+    id: "off_weekend_dum_biryani",
+    title: "Barpeta Special: 15% OFF Royal Biryani",
+    code: "ROYAL15",
+    description: "Enjoy 15% discount on authentic Dum Biryani & Assam Local Chicken on orders above ₹399.",
+    discountType: "PERCENTAGE",
+    discountValue: 15,
+    minOrderAmount: 399,
+    maxDiscountAmount: 150,
+    applicableOrderModes: ["DELIVERY", "PICKUP", "IN_ROOM"],
+    isActive: true,
+    startDate: "2026-10-01T00:00:00.000Z",
+    endDate: "2026-12-31T23:59:59.000Z",
+    terms: "Owner-configured verified offer. Minimum order ₹399. Maximum discount ₹150. Valid for Delivery, Pickup and In-Room dining.",
+    badge: "Today's Verified Special",
+    redemptionsCount: 18
+  }
+];
 
 export const BARPETA_LOCALITIES = [
   { id: "donakuchi", name: "Donakuchi (Near NRL Petrol Pump)", distanceKm: 0.4 },
@@ -48,154 +88,170 @@ export const BARPETA_LOCALITIES = [
 ];
 
 // ----------------------------------------------------------------------------
-// OFFICIAL PHYSICAL ROOM INVENTORY (9 PHYSICAL ROOMS ACROSS 3 FLOORS)
+// OFFICIAL PHYSICAL ROOM INVENTORY (10 PHYSICAL ROOMS ACROSS 3 FLOORS)
 // ----------------------------------------------------------------------------
 export const OFFICIAL_PHYSICAL_ROOMS = [
-  // 1st Floor
-  { 
-    number: "101", 
+  // 1st Floor (2 Rooms: 101, 102)
+  {
+    number: "101",
     roomNumber: "101",
     floor: "1st Floor",
-    floorNumber: 1, 
-    categoryId: "suite-ac", 
-    categoryName: "Suite Room (A/C)", 
-    tariff: 5000, 
+    floorNumber: 1,
+    categoryId: "suite-ac",
+    categoryName: "Suite Room (A/C)",
+    tariff: 5000,
     basePrice: 5000,
-    isAc: true, 
+    isAc: true,
     ac: true,
-    isAvailable: true, 
+    isAvailable: true,
     cleaningStatus: "Clean & Ready",
     guestName: "",
-    highlights: "Luxury Presidential Suite, Air-Conditioned, Premium Amenities, In-Room Dining, Free Wi-Fi & Parking"
+    highlights: "Luxury Presidential Suite 101, Air-Conditioned, Premium Amenities, In-Room Dining, Free Wi-Fi & Parking"
+  },
+  {
+    number: "102",
+    roomNumber: "102",
+    floor: "1st Floor",
+    floorNumber: 1,
+    categoryId: "suite-ac",
+    categoryName: "Suite Room (A/C)",
+    tariff: 5000,
+    basePrice: 5000,
+    isAc: true,
+    ac: true,
+    isAvailable: true,
+    cleaningStatus: "Clean & Ready",
+    guestName: "",
+    highlights: "Executive VIP Suite 102, Air-Conditioned, Private Lounge, In-Room Dining, Free Wi-Fi & Parking"
   },
 
   // 2nd Floor
-  { 
-    number: "201", 
+  {
+    number: "201",
     roomNumber: "201",
     floor: "2nd Floor",
-    floorNumber: 2, 
-    categoryId: "deluxe-ac", 
-    categoryName: "Deluxe Room (A/C)", 
-    tariff: 2500, 
+    floorNumber: 2,
+    categoryId: "deluxe-ac",
+    categoryName: "Deluxe Room (A/C)",
+    tariff: 2500,
     basePrice: 2500,
-    isAc: true, 
+    isAc: true,
     ac: true,
-    isAvailable: true, 
+    isAvailable: true,
     cleaningStatus: "Clean & Ready",
     guestName: "",
     highlights: "Executive Deluxe Double Bed, Air-Conditioned, Work Desk, In-Room Dining, Free Wi-Fi"
   },
-  { 
-    number: "202", 
+  {
+    number: "202",
     roomNumber: "202",
     floor: "2nd Floor",
-    floorNumber: 2, 
-    categoryId: "single-ac", 
-    categoryName: "Single Room (A/C)", 
-    tariff: 2000, 
+    floorNumber: 2,
+    categoryId: "single-ac",
+    categoryName: "Single Room (A/C)",
+    tariff: 2000,
     basePrice: 2000,
-    isAc: true, 
+    isAc: true,
     ac: true,
-    isAvailable: true, 
+    isAvailable: true,
     cleaningStatus: "Clean & Ready",
     guestName: "",
     highlights: "Comfortable Single/Solo Traveler AC Room, In-Room Dining, Free Wi-Fi"
   },
-  { 
-    number: "203", 
+  {
+    number: "203",
     roomNumber: "203",
     floor: "2nd Floor",
-    floorNumber: 2, 
-    categoryId: "deluxe-ac", 
-    categoryName: "Deluxe Room (A/C)", 
-    tariff: 2500, 
+    floorNumber: 2,
+    categoryId: "deluxe-ac",
+    categoryName: "Deluxe Room (A/C)",
+    tariff: 2500,
     basePrice: 2500,
-    isAc: true, 
+    isAc: true,
     ac: true,
-    isAvailable: true, 
+    isAvailable: true,
     cleaningStatus: "Clean & Ready",
     guestName: "",
     highlights: "Executive Deluxe Double Bed, Air-Conditioned, Work Desk, In-Room Dining, Free Wi-Fi"
   },
-  { 
-    number: "204", 
+  {
+    number: "204",
     roomNumber: "204",
     floor: "2nd Floor",
-    floorNumber: 2, 
-    categoryId: "twin-ac", 
-    categoryName: "Twin Room (A/C)", 
-    tariff: 3500, 
+    floorNumber: 2,
+    categoryId: "twin-ac",
+    categoryName: "Twin Room (A/C)",
+    tariff: 3500,
     basePrice: 3500,
-    isAc: true, 
+    isAc: true,
     ac: true,
-    isAvailable: true, 
+    isAvailable: true,
     cleaningStatus: "Dirty / Needs Cleaning",
     guestName: "",
     highlights: "Spacious Twin Beds, Air-Conditioned, Ideal for Family/Friends, In-Room Dining, Free Wi-Fi"
   },
 
   // 3rd Floor
-  { 
-    number: "301", 
+  {
+    number: "301",
     roomNumber: "301",
     floor: "3rd Floor",
-    floorNumber: 3, 
-    categoryId: "deluxe-ac", 
-    categoryName: "Deluxe Room (A/C)", 
-    tariff: 2500, 
+    floorNumber: 3,
+    categoryId: "deluxe-ac",
+    categoryName: "Deluxe Room (A/C)",
+    tariff: 2500,
     basePrice: 2500,
-    isAc: true, 
+    isAc: true,
     ac: true,
-    isAvailable: true, 
+    isAvailable: true,
     cleaningStatus: "Clean & Ready",
     guestName: "",
     highlights: "Executive Deluxe Double Bed, Air-Conditioned, Work Desk, In-Room Dining, Free Wi-Fi"
   },
-  { 
-    number: "302", 
+  {
+    number: "302",
     roomNumber: "302",
     floor: "3rd Floor",
-    floorNumber: 3, 
-    categoryId: "single-non-ac", 
-    categoryName: "Single Room (Non-A/C)", 
-    tariff: 1400, 
+    floorNumber: 3,
+    categoryId: "single-non-ac",
+    categoryName: "Single Room (Non-A/C)",
+    tariff: 1400,
     basePrice: 1400,
-    isAc: false, 
+    isAc: false,
     ac: false,
-    isAvailable: true, 
+    isAvailable: true,
     cleaningStatus: "Clean & Ready",
     guestName: "",
     highlights: "Budget-Friendly Non-A/C Single Room, Clean & Comfortable, In-Room Dining, Free Wi-Fi"
   },
-  { 
-    number: "303", 
+  {
+    number: "303",
     roomNumber: "303",
     floor: "3rd Floor",
-    floorNumber: 3, 
-    categoryId: "twin-non-ac", 
-    categoryName: "Twin Room (Non-A/C)", 
-    tariff: 3500, 
+    floorNumber: 3,
+    categoryId: "twin-non-ac",
+    categoryName: "Twin Room (Non-A/C)",
+    tariff: 3500,
     basePrice: 3500,
-    isAc: false, 
+    isAc: false,
     ac: false,
-    isAvailable: true, 
+    isAvailable: true,
     cleaningStatus: "Cleaning in Progress",
     guestName: "",
     highlights: "Spacious Twin Beds, Non-A/C Well-Ventilated Room, In-Room Dining, Free Wi-Fi"
   },
-  { 
-    number: "304", 
+  {
+    number: "304",
     roomNumber: "304",
     floor: "3rd Floor",
-    floorNumber: 3, 
-    categoryId: "single-non-ac", 
-    categoryName: "Single Room (Non-A/C)", 
-    tariff: 1400, 
+    floorNumber: 3,
+    categoryId: "single-non-ac",
+    categoryName: "Single Room (Non-A/C)",
+    tariff: 1400,
     basePrice: 1400,
-    isAc: false, 
+    isAc: false,
     ac: false,
-    isAvailable: true, 
+    isAvailable: true,
     cleaningStatus: "Clean & Ready",
     guestName: "",
     highlights: "Budget-Friendly Non-A/C Single Room, Clean & Comfortable, In-Room Dining, Free Wi-Fi"
@@ -203,7 +259,7 @@ export const OFFICIAL_PHYSICAL_ROOMS = [
 ];
 
 // ----------------------------------------------------------------------------
-// OFFICIAL ROOM CATEGORIES (6 CATEGORIES, 9 ROOMS TOTAL)
+// OFFICIAL ROOM CATEGORIES (6 CATEGORIES, 10 ROOMS TOTAL ACROSS 3 FLOORS)
 // ----------------------------------------------------------------------------
 export const INITIAL_ROOMS = [
   {
@@ -212,7 +268,7 @@ export const INITIAL_ROOMS = [
     type: "Presidential Suite",
     isAc: true,
     floor: "1st Floor",
-    assignedRooms: ["101"],
+    assignedRooms: ["101", "102"],
     tariff: 5000,
     originalTariff: 5800,
     status: "Available",
@@ -220,7 +276,14 @@ export const INITIAL_ROOMS = [
     bed: "King Size Royal Bed",
     size: "420 sq.ft",
     image: "/images/IMG_5217.JPG",
-    gallery: ["/images/IMG_5217.JPG", "/images/IMG_5228.JPG", "/images/IMG_5206.JPG"],
+    gallery: ["/images/IMG_5217.JPG", "/images/IMG_5218.JPG", "/images/IMG_5219.JPG", "/images/IMG_5220.JPG", "/images/IMG_5203.JPG"],
+    galleryLabels: [
+      "Master King Bed & Luxury Suite Decor",
+      "Private Living Lounge & Executive Sofa",
+      "Luxury Attached Bathroom & Vanity Mirror",
+      "Modern Bathroom Shower & Water Geyser",
+      "Jonak Hotel Main Building & Reserved Parking"
+    ],
     amenities: [
       "Master Climate Control Split A/C",
       "Executive Living Area & Work Desk",
@@ -231,7 +294,7 @@ export const INITIAL_ROOMS = [
       "Free Reserved VIP Car Parking",
       "100% Generator Power Backup"
     ],
-    description: "Jonak Hotel's most prestigious accommodation (Room 101). Features an expansive bedroom, private living lounge, plush furnishings, and personalized hospitality for dignitaries and wedding VIPs."
+    description: "Jonak Hotel's most prestigious accommodations (Rooms 101 & 102). Features expansive bedrooms, private living lounge, plush furnishings, and personalized hospitality for dignitaries and wedding VIPs."
   },
   {
     id: "twin-ac",
@@ -247,7 +310,14 @@ export const INITIAL_ROOMS = [
     bed: "2 Spacious Twin Luxury Beds",
     size: "320 sq.ft",
     image: "/images/IMG_5222.JPG",
-    gallery: ["/images/IMG_5222.JPG", "/images/IMG_5206.JPG", "/images/IMG_5227.JPG"],
+    gallery: ["/images/IMG_5222.JPG", "/images/IMG_5223.JPG", "/images/IMG_5219.JPG", "/images/IMG_5224.JPG", "/images/IMG_5203.JPG"],
+    galleryLabels: [
+      "Two Separate Ergonomic Twin Beds (A/C)",
+      "Twin Room Interior & Curtained Window",
+      "Attached Clean Bathroom & Hot Water",
+      "Hotel Corridor & Secure Key Entry",
+      "Jonak Hotel Front View & Parking"
+    ],
     amenities: [
       "Whisper-Quiet Split AC",
       "Two Separate Ergonomic Twin Beds",
@@ -274,7 +344,14 @@ export const INITIAL_ROOMS = [
     bed: "2 Spacious Twin Beds",
     size: "320 sq.ft",
     image: "/images/IMG_5227.JPG",
-    gallery: ["/images/IMG_5227.JPG", "/images/IMG_5222.JPG", "/images/IMG_5206.JPG"],
+    gallery: ["/images/IMG_5227.JPG", "/images/IMG_5222.JPG", "/images/IMG_5219.JPG", "/images/IMG_5225.JPG", "/images/IMG_5203.JPG"],
+    galleryLabels: [
+      "Spacious Twin Beds (Non-A/C Standard)",
+      "Twin Bed Layout & Natural Lighting",
+      "Attached Clean Bathroom",
+      "Ventilated Window with Fresh Cross-Breeze",
+      "Jonak Hotel Building & Parking"
+    ],
     amenities: [
       "Naturally Well-Ventilated Room",
       "High-Speed Ceiling Fans",
@@ -301,7 +378,14 @@ export const INITIAL_ROOMS = [
     bed: "Executive Deluxe Double Bed",
     size: "280 sq.ft",
     image: "/images/IMG_5206.JPG",
-    gallery: ["/images/IMG_5206.JPG", "/images/IMG_5222.JPG", "/images/IMG_5217.JPG"],
+    gallery: ["/images/IMG_5206.JPG", "/images/IMG_5217.JPG", "/images/IMG_5219.JPG", "/images/IMG_5224.JPG", "/images/IMG_5203.JPG"],
+    galleryLabels: [
+      "Executive Deluxe Double Bed (A/C)",
+      "Plush Bedding & Workstation",
+      "Attached Bathroom & Hot Geyser",
+      "Corridor & 2nd/3rd Floor Elevator Access",
+      "Jonak Hotel Front Parking"
+    ],
     amenities: [
       "Inverter Split Air Conditioner",
       "Executive Deluxe Double Bed",
@@ -328,7 +412,14 @@ export const INITIAL_ROOMS = [
     bed: "Plush Single Luxury Bed",
     size: "190 sq.ft",
     image: "/images/IMG_5228.JPG",
-    gallery: ["/images/IMG_5228.JPG", "/images/IMG_5206.JPG", "/images/IMG_5222.JPG"],
+    gallery: ["/images/IMG_5228.JPG", "/images/IMG_5206.JPG", "/images/IMG_5219.JPG", "/images/IMG_5220.JPG", "/images/IMG_5203.JPG"],
+    galleryLabels: [
+      "Single Executive Plush Bed with A/C",
+      "Room Interior & Dedicated Split AC",
+      "Attached Clean Private Bathroom",
+      "Shower Area & Water Geyser",
+      "Jonak Hotel Main Entrance"
+    ],
     amenities: [
       "Whisper-Quiet Split AC",
       "Plush Single Bed",
@@ -355,7 +446,13 @@ export const INITIAL_ROOMS = [
     bed: "Comfortable Single Bed",
     size: "170 sq.ft",
     image: "/images/IMG_5229.JPG",
-    gallery: ["/images/IMG_5229.JPG", "/images/IMG_5206.JPG", "/images/IMG_5228.JPG"],
+    gallery: ["/images/IMG_5229.JPG", "/images/IMG_5228.JPG", "/images/IMG_5219.JPG", "/images/IMG_5203.JPG"],
+    galleryLabels: [
+      "Comfortable Single Bed (Non-A/C Budget)",
+      "Clean Single Room Setup & Ceiling Fan",
+      "Attached Private Bathroom",
+      "Jonak Hotel Building & Front Parking"
+    ],
     amenities: [
       "Naturally Ventilated Room",
       "Comfortable Single Bed",
@@ -1419,7 +1516,6 @@ export const STAFF_ROLES = {
   owner: {
     id: "owner",
     title: "Super Admin / Hotel Owner",
-    defaultPin: "1234",
     badge: "👑 Owner",
     color: "#D4AF37",
     description: "Complete master control over revenue graphs, profit/loss, staff roster, store inventory, room rates, and hotel settings."
@@ -1427,15 +1523,13 @@ export const STAFF_ROLES = {
   reception: {
     id: "reception",
     title: "Front Desk & Receptionist",
-    defaultPin: "2222",
     badge: "🛎️ Front Desk",
     color: "#00BAF2",
-    description: "Guest check-in/out, physical room grid, guest Aadhaar ID verification, police Form C printing, and walk-in billing."
+    description: "Guest check-in/out, physical room grid, guest government photo ID verification at check-in, registration, and walk-in billing."
   },
   kitchen: {
     id: "kitchen",
     title: "Head Chef & Store Manager",
-    defaultPin: "3333",
     badge: "👨‍🍳 Kitchen & Store",
     color: "#FF9900",
     description: "Live Kitchen Display System (KDS), dish out-of-stock switcher, raw food ingredients tracker, and cooking gas updates."
@@ -1443,7 +1537,6 @@ export const STAFF_ROLES = {
   delivery: {
     id: "delivery",
     title: "Delivery Partner & Waiter",
-    defaultPin: "4444",
     badge: "🛵 Delivery & Service",
     color: "#10B981",
     description: "Ready food orders, 5 KM Google Maps navigation, 1-tap delivery confirmation, and cash/UPI collection tracker."
@@ -1451,7 +1544,6 @@ export const STAFF_ROLES = {
   housekeeping: {
     id: "housekeeping",
     title: "Housekeeping & Room Care",
-    defaultPin: "5555",
     badge: "🧹 Housekeeping",
     color: "#A855F7",
     description: "Live 9 physical rooms cleaning dashboard (Dirty/Checkout -> Cleaning in Progress -> Clean & Ready for Guest)."
@@ -1461,9 +1553,9 @@ export const STAFF_ROLES = {
 export const DEFAULT_STAFF_MEMBERS = [
   {
     id: "STF-101",
-    name: "Bishnu Choudhury",
+    name: "Shahidul Islam",
     role: "owner",
-    roleTitle: "Super Admin / Hotel Owner",
+    roleTitle: "👑 Proprietor / Super Admin",
     pin: "1234",
     phone: "+91 96785 82286",
     status: "On Duty",
@@ -1472,46 +1564,46 @@ export const DEFAULT_STAFF_MEMBERS = [
   },
   {
     id: "STF-102",
-    name: "Biki Sharma",
+    name: "Hafijur",
     role: "reception",
-    roleTitle: "Front Desk Executive",
+    roleTitle: "🛎️ Reception, Billing & KYC Verification Desk",
     pin: "2222",
     phone: "+91 98540 11223",
     status: "On Duty",
-    shift: "Morning (8 AM - 4 PM)",
+    shift: "Morning & Day (8 AM - 8 PM)",
     joinedDate: "2024-03-15"
   },
   {
     id: "STF-103",
-    name: "Chef Ratan Das",
+    name: "Master Chef",
     role: "kitchen",
-    roleTitle: "Head Master Chef",
+    roleTitle: "👨‍🍳 Head Master Chef & KDS Lead",
     pin: "3333",
     phone: "+91 94350 33445",
     status: "On Duty",
-    shift: "Full Shift (10 AM - 10 PM)",
+    shift: "Full Shift (10 AM - 10:30 PM)",
     joinedDate: "2024-02-10"
   },
   {
     id: "STF-104",
     name: "Monojit Roy",
     role: "delivery",
-    roleTitle: "Fast Delivery Captain",
+    roleTitle: "🛵 Fast Delivery Captain (5 KM Radius)",
     pin: "4444",
     phone: "+91 88760 55667",
     status: "On Duty",
-    shift: "Day & Evening (11 AM - 9 PM)",
+    shift: "Day & Evening (11 AM - 9:30 PM)",
     joinedDate: "2024-05-01"
   },
   {
     id: "STF-105",
-    name: "Rahul Barman",
+    name: "Hafij",
     role: "housekeeping",
-    roleTitle: "Housekeeping Supervisor",
+    roleTitle: "🏃‍♂️ All-Rounder Caretaker, Room Guide & Housekeeping",
     pin: "5555",
     phone: "+91 91010 77889",
     status: "On Duty",
-    shift: "Morning (7 AM - 3 PM)",
+    shift: "Morning to Evening (7 AM - 9 PM)",
     joinedDate: "2024-04-12"
   }
 ];
@@ -1663,7 +1755,7 @@ export const INITIAL_EXPENSES = [
     category: "Kitchen Raw Stock",
     amount: 4750,
     paidVia: "Paytm UPI",
-    loggedBy: "Bishnu Choudhury",
+    loggedBy: "Shahidul Islam",
     time: "04:15 PM"
   },
   {

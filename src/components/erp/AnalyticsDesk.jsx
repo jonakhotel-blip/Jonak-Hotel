@@ -144,7 +144,7 @@ export const AnalyticsDesk = () => {
 
 🏨 *OPERATIONAL METRICS:*
 • Total Deliveries (Within 5 KM): ${deliveryOrders.length}
-• Total Rooms Occupied: ${physicalRooms.filter(r => !r.isAvailable).length} / 9
+• Total Rooms Occupied: ${physicalRooms.filter(r => !r.isAvailable).length} / ${physicalRooms.length || 10}
 • Critical Low Stock Items: ${rawInventory.filter(i => i.currentStock <= i.minThreshold).length}
 
 _Generated securely via Jonak ERP Cloud System_`;

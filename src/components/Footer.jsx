@@ -62,8 +62,8 @@ export const Footer = ({ onOpenAdmin, setActiveView }) => {
             </div>
 
             <p style={{ fontSize: '0.86rem', lineHeight: 1.6, marginBottom: '1.2rem', color: 'var(--text-secondary)' }}>
-              Barpeta’s #1 rated hospitality destination combining Royal Assamese warmth, 5-star luxury AC accommodations, 
-              and authentic multi-cuisine dining with Free 5 KM home delivery.
+              Premier hospitality destination in Barpeta combining authentic Assamese warmth, comfortable AC & Non-AC accommodations, 
+              and multi-cuisine dining with local home delivery options.
             </p>
 
             <div style={{
@@ -199,9 +199,9 @@ export const Footer = ({ onOpenAdmin, setActiveView }) => {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-            {/* Discreet Hotel Owner Command Center Link */}
             <button
               onClick={onOpenAdmin}
+              aria-label="Staff and Management Portal Login"
               style={{
                 background: 'rgba(212, 175, 55, 0.08)',
                 border: '1px solid rgba(212, 175, 55, 0.25)',
@@ -218,7 +218,7 @@ export const Footer = ({ onOpenAdmin, setActiveView }) => {
               }}
             >
               <Lock size={12} color="var(--gold-primary)" />
-              <span>Owner Command Center (PIN: 1234)</span>
+              <span>Staff & Management Portal</span>
             </button>
           </div>
         </div>

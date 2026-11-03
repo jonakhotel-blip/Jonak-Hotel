@@ -308,11 +308,14 @@ export const AboutSection = () => {
               </p>
 
               <div>
-                <div style={{ fontWeight: 800, color: 'var(--gold-light)', fontSize: '1.05rem' }}>
-                  Management & Proprietor
+                <div style={{ fontWeight: 800, color: 'var(--gold-light)', fontSize: '1.15rem' }}>
+                  Shahidul Islam
+                </div>
+                <div style={{ fontSize: '0.82rem', color: '#FFFFFF', fontWeight: 600 }}>
+                  Owner & Proprietor
                 </div>
                 <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  Jonak Hotel & Restaurant Group • Barpeta, Assam
+                  Jonak Hotel & Restaurant • Barpeta, Assam
                 </div>
               </div>
             </div>
@@ -453,10 +456,10 @@ export const AboutSection = () => {
               <ShieldCheck size={24} />
             </div>
             <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.5rem' }}>
-              Form C & e-KYC Compliant
+              Safe & Verified Stay
             </h4>
             <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-              100% compliant with Assam Police & Barpeta District Administration with mobile Aadhaar photo capture.
+              Standard guest identity verification conducted safely in-person at front desk check-in as per local hospitality norms.
             </p>
           </div>
 

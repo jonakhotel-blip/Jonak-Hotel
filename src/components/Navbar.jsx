@@ -120,22 +120,22 @@ export const Navbar = ({ onOpenCart, onOpenAdmin, activeView, setActiveView }) =
             fontSize: '0.92rem'
           }} className="desktop-nav-links">
             <a 
-              href="#menu" 
-              onClick={() => setActiveView('home')} 
-              style={{ color: 'var(--text-secondary)', textDecoration: 'none', transition: 'color 0.2s' }}
-              onMouseEnter={(e) => e.target.style.color = 'var(--gold-light)'}
-              onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
-            >
-              Food Menu & Delivery
-            </a>
-            <a 
               href="#rooms" 
               onClick={() => setActiveView('home')}
               style={{ color: 'var(--text-secondary)', textDecoration: 'none', transition: 'color 0.2s' }}
               onMouseEnter={(e) => e.target.style.color = 'var(--gold-light)'}
               onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
             >
-              AC Rooms & Suites
+              Stay (Rooms & Tariff)
+            </a>
+            <a 
+              href="#menu" 
+              onClick={() => setActiveView('home')} 
+              style={{ color: 'var(--text-secondary)', textDecoration: 'none', transition: 'color 0.2s' }}
+              onMouseEnter={(e) => e.target.style.color = 'var(--gold-light)'}
+              onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
+            >
+              Dine (Menu & Delivery)
             </a>
             <a 
               href="#events" 
@@ -144,7 +144,7 @@ export const Navbar = ({ onOpenCart, onOpenAdmin, activeView, setActiveView }) =
               onMouseEnter={(e) => e.target.style.color = 'var(--gold-light)'}
               onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
             >
-              Open Stage & Events
+              Celebrate (Open Stage & Banquets)
             </a>
             <a 
               href="#landmarks" 
@@ -153,7 +153,7 @@ export const Navbar = ({ onOpenCart, onOpenAdmin, activeView, setActiveView }) =
               onMouseEnter={(e) => e.target.style.color = 'var(--gold-light)'}
               onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
             >
-              Barpeta Guide
+              Location & Guide
             </a>
             <a 
               href="#about" 
@@ -162,7 +162,7 @@ export const Navbar = ({ onOpenCart, onOpenAdmin, activeView, setActiveView }) =
               onMouseEnter={(e) => e.target.style.color = 'var(--gold-light)'}
               onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
             >
-              Our Story
+              About Us
             </a>
             <a 
               href="#faq" 
@@ -177,6 +177,31 @@ export const Navbar = ({ onOpenCart, onOpenAdmin, activeView, setActiveView }) =
 
           {/* Right Action Controls */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            {/* Live Order Tracker Trigger */}
+            <a
+              href="#track"
+              onClick={(e) => {
+                e.preventDefault();
+                window.location.hash = 'track';
+              }}
+              style={{
+                color: '#10B981',
+                textDecoration: 'none',
+                fontWeight: 700,
+                fontSize: '0.82rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                background: 'rgba(16, 185, 129, 0.12)',
+                border: '1px solid rgba(16, 185, 129, 0.35)',
+                borderRadius: '20px',
+                padding: '0.4rem 0.8rem'
+              }}
+            >
+              <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10B981' }} />
+              <span>Track Order</span>
+            </a>
+
             {/* Google Rating Trust Badge (Desktop) */}
             <div style={{
               display: 'none',
@@ -303,17 +328,8 @@ export const Navbar = ({ onOpenCart, onOpenAdmin, activeView, setActiveView }) =
               borderBottom: '1px solid var(--border-subtle)'
             }}>
               <Star size={14} fill="#D4AF37" color="#D4AF37" />
-              <span>Barpeta's #1 Rated Hotel & Restaurant (4.2★)</span>
+              <span>4.2★ Google Rated (128+ Verified Reviews)</span>
             </div>
-
-            <a 
-              href="#menu" 
-              onClick={() => { setActiveView('home'); setMobileMenuOpen(false); }}
-              style={{ color: 'var(--text-primary)', textDecoration: 'none', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.6rem' }}
-            >
-              <Utensils size={18} color="var(--gold-primary)" />
-              <span>Digital Food Menu & Free 5 KM Delivery</span>
-            </a>
 
             <a 
               href="#rooms" 
@@ -321,7 +337,16 @@ export const Navbar = ({ onOpenCart, onOpenAdmin, activeView, setActiveView }) =
               style={{ color: 'var(--text-primary)', textDecoration: 'none', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.6rem' }}
             >
               <BedDouble size={18} color="var(--gold-primary)" />
-              <span>AC Rooms & Luxury Suites</span>
+              <span>Stay: Rooms & Verified Tariff</span>
+            </a>
+
+            <a 
+              href="#menu" 
+              onClick={() => { setActiveView('home'); setMobileMenuOpen(false); }}
+              style={{ color: 'var(--text-primary)', textDecoration: 'none', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.6rem' }}
+            >
+              <Utensils size={18} color="var(--gold-primary)" />
+              <span>Dine: 82-Item Menu & Home Delivery</span>
             </a>
 
             <a 
@@ -330,7 +355,7 @@ export const Navbar = ({ onOpenCart, onOpenAdmin, activeView, setActiveView }) =
               style={{ color: 'var(--text-primary)', textDecoration: 'none', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.6rem' }}
             >
               <Sparkles size={18} color="var(--gold-primary)" />
-              <span>Open Stage & Celebration Bookings</span>
+              <span>Celebrate: Open Stage & Banquets</span>
             </a>
 
             <a 

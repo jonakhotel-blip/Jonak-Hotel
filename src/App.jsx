@@ -13,6 +13,7 @@ import { CartDrawer } from './components/CartDrawer';
 import { BookingModal } from './components/BookingModal';
 import { MobileActionDock } from './components/MobileActionDock';
 import { AdminPanel } from './components/AdminPanel';
+import { OrderTrackerModal } from './components/OrderTrackerModal';
 import { CheckCircle2, AlertCircle, Info } from 'lucide-react';
 
 export function App() {
@@ -27,6 +28,8 @@ export function App() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [preselectedRoom, setPreselectedRoom] = useState(null);
+  const [isTrackerOpen, setIsTrackerOpen] = useState(false);
+  const [trackingOrderId, setTrackingOrderId] = useState(null);
 
   // Sync hash routing
   useEffect(() => {
@@ -35,6 +38,8 @@ export function App() {
         setActiveView('admin');
       } else if (window.location.hash === '#cart') {
         setIsCartOpen(true);
+      } else if (window.location.hash === '#track') {
+        setIsTrackerOpen(true);
       }
     };
     window.addEventListener('hashchange', handleHashChange);
@@ -116,6 +121,13 @@ export function App() {
             isOpen={isBookingModalOpen}
             onClose={() => setIsBookingModalOpen(false)}
             preselectedRoom={preselectedRoom}
+          />
+
+          {/* Zomato-Style Live Order & Map Tracker Modal */}
+          <OrderTrackerModal
+            isOpen={isTrackerOpen}
+            onClose={() => setIsTrackerOpen(false)}
+            targetOrderId={trackingOrderId}
           />
         </>
       )}

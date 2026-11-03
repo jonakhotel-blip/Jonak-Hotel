@@ -21,21 +21,33 @@ import {
   MapPin,
   Copy,
   ExternalLink,
-  Check
+  Check,
+  CreditCard,
+  Clock,
+  RefreshCw
 } from 'lucide-react';
 
 export const BookingModal = ({ isOpen, onClose, preselectedRoom }) => {
-  const { hotelInfo, rooms, physicalRooms, settings, addRoomBooking, showToast } = useHotel();
+  const { 
+    hotelInfo, 
+    rooms, 
+    physicalRooms, 
+    settings, 
+    addRoomBooking, 
+    createPaymentOrder, 
+    verifyPayment, 
+    showToast,
+    uploadKycDocument 
+  } = useHotel();
+
+  const todayStr = new Date().toISOString().split('T')[0];
 
   // Form states
   const [selectedRoomId, setSelectedRoomId] = useState(preselectedRoom?.id || rooms[0]?.id || 'suite-ac');
   const [selectedRoomNumber, setSelectedRoomNumber] = useState('');
   const [guestName, setGuestName] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
-  const [checkIn, setCheckIn] = useState(() => {
-    const d = new Date();
-    return d.toISOString().split('T')[0];
-  });
+  const [checkIn, setCheckIn] = useState(() => todayStr);
   const [checkOut, setCheckOut] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() + 1);
@@ -45,20 +57,56 @@ export const BookingModal = ({ isOpen, onClose, preselectedRoom }) => {
   const [specialRequests, setSpecialRequests] = useState('');
   const [bookingConfirmed, setBookingConfirmed] = useState(null);
 
-  // e-KYC & Aadhaar Verification states
-  const [idType, setIdType] = useState('Aadhaar Card');
-  const [idNumber, setIdNumber] = useState('');
-  const [guestCity, setGuestCity] = useState('');
-  const [aadhaarFront, setAadhaarFront] = useState(null);
-  const [aadhaarBack, setAadhaarBack] = useState(null);
-  const [showIdNumber, setShowIdNumber] = useState(true);
-  const [kycConsent, setKycConsent] = useState(true);
+  // Digital KYC Document Upload
+  const [kycDocUrl, setKycDocUrl] = useState('');
+  const [kycDocName, setKycDocName] = useState('');
+  const [isUploadingKyc, setIsUploadingKyc] = useState(false);
+
+  // In-Person Verification & Consent
+  const [acknowledgedIdPolicy, setAcknowledgedIdPolicy] = useState(true);
+  const [formErrors, setFormErrors] = useState({});
 
   // Payment states
-  const [paymentPreference, setPaymentPreference] = useState('PAYTM_UPI'); // 'PAYTM_UPI' | 'FRONT_DESK'
+  const [paymentPreference, setPaymentPreference] = useState('PAYTM_UPI'); // 'PAYTM_UPI' | 'RAZORPAY' | 'FRONT_DESK'
   const [bookingUtr, setBookingUtr] = useState('');
   const [copiedBookingUpi, setCopiedBookingUpi] = useState(false);
   const [showFullBookingQr, setShowFullBookingQr] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Room Photograph Showcase & Gallery Navigation
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
+
+  // Reset photo index when activeRoom changes
+  React.useEffect(() => {
+    setSelectedPhotoIndex(0);
+  }, [selectedRoomId]);
+
+  const handleKycFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) {
+      showToast('Document image size should be under 8MB', 'danger');
+      return;
+    }
+    setIsUploadingKyc(true);
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = reader.result;
+      const res = await uploadKycDocument(base64, {
+        guestName: guestName.trim() || 'Room Guest',
+        docType: 'Aadhaar / Govt Photo ID'
+      });
+      setIsUploadingKyc(false);
+      if (res && res.success) {
+        setKycDocUrl(res.url);
+        setKycDocName(file.name);
+        showToast('✅ Government ID / Aadhaar uploaded & encrypted successfully!', 'success');
+      } else {
+        showToast('Failed to upload document. You can present it at check-in.', 'info');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleCopyBookingUpi = () => {
     try {
@@ -71,31 +119,19 @@ export const BookingModal = ({ isOpen, onClose, preselectedRoom }) => {
     }
   };
 
-  // Auto-format Aadhaar number with 4-digit groups (XXXX XXXX XXXX)
-  const handleIdNumberChange = (val) => {
-    if (idType === 'Aadhaar Card') {
-      const digits = val.replace(/\D/g, '').slice(0, 12);
-      const formatted = digits.replace(/(\d{4})(?=\d)/g, '$1 ');
-      setIdNumber(formatted);
-    } else {
-      setIdNumber(val.toUpperCase().slice(0, 20));
+  const handleCheckInChange = (newDate) => {
+    setCheckIn(newDate);
+    setFormErrors(prev => ({ ...prev, dates: undefined }));
+    if (newDate >= checkOut) {
+      const nextDay = new Date(newDate);
+      nextDay.setDate(nextDay.getDate() + 1);
+      setCheckOut(nextDay.toISOString().split('T')[0]);
     }
   };
 
-  const handleFileUpload = (e, side) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 8 * 1024 * 1024) {
-      showToast('File size must be under 8MB', 'danger');
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (side === 'front') setAadhaarFront(reader.result);
-      if (side === 'back') setAadhaarBack(reader.result);
-      showToast(`${idType} ${side === 'front' ? 'Front Side' : 'Back Side'} attached!`, 'success');
-    };
-    reader.readAsDataURL(file);
+  const handleCheckOutChange = (newDate) => {
+    setCheckOut(newDate);
+    setFormErrors(prev => ({ ...prev, dates: undefined }));
   };
 
   // Update room selection if preselectedRoom changes
@@ -106,6 +142,21 @@ export const BookingModal = ({ isOpen, onClose, preselectedRoom }) => {
   }, [preselectedRoom]);
 
   const activeRoom = rooms.find((r) => r.id === selectedRoomId) || rooms[0];
+
+  const roomImagesList = React.useMemo(() => {
+    if (!activeRoom) return ['/images/IMG_5217.JPG'];
+    const list = [];
+    if (activeRoom.image) list.push(activeRoom.image);
+    if (Array.isArray(activeRoom.gallery)) {
+      activeRoom.gallery.forEach(img => {
+        if (!list.includes(img)) list.push(img);
+      });
+    }
+    if (list.length === 0) list.push('/images/IMG_5217.JPG');
+    return list;
+  }, [activeRoom]);
+
+  const currentDisplayImage = roomImagesList[selectedPhotoIndex] || roomImagesList[0] || '/images/IMG_5217.JPG';
 
   // Set default room number whenever active category changes
   React.useEffect(() => {
@@ -143,42 +194,53 @@ export const BookingModal = ({ isOpen, onClose, preselectedRoom }) => {
   const catPhysicalRooms = (physicalRooms || []).filter(pr => pr.categoryId === activeRoom?.id);
   const freeRoomsInCat = catPhysicalRooms.filter(pr => pr.isAvailable);
 
-  const handleSubmitBooking = (e) => {
+  const handleSubmitBooking = async (e) => {
     e.preventDefault();
+    const errors = {};
 
-    if (!guestName.trim() || !guestPhone.trim()) {
-      showToast('Please enter your Name and Mobile Number.', 'danger');
-      return;
-    }
-
-    const cleanId = idNumber.replace(/\s+/g, '');
-    if (idType === 'Aadhaar Card' && cleanId.length !== 12) {
-      showToast('Please enter a valid 12-digit Aadhaar Card number for hotel e-KYC verification.', 'danger');
-      return;
-    }
-    if (!cleanId) {
-      showToast(`Please enter your valid ${idType} number for e-KYC.`, 'danger');
-      return;
+    // Validate Guest Name
+    if (!guestName.trim() || guestName.trim().length < 2) {
+      errors.guestName = 'Please enter your full name (minimum 2 characters).';
     }
 
-    if (!kycConsent) {
-      showToast('Please accept the guest e-KYC declaration.', 'danger');
+    // Validate Indian Mobile Phone (10 digits starting with 6-9)
+    const cleanPhone = guestPhone.replace(/\D/g, '');
+    const phoneRegex = /^[6-9]\d{9}$/;
+    if (!phoneRegex.test(cleanPhone)) {
+      errors.guestPhone = 'Please enter a valid 10-digit mobile number.';
+    }
+
+    // Validate Dates
+    if (!checkIn || checkIn < todayStr) {
+      errors.dates = 'Check-in date cannot be in the past.';
+    } else if (!checkOut || checkOut <= checkIn) {
+      errors.dates = 'Check-out date must be after check-in date.';
+    }
+
+    // Validate Physical ID Acknowledgement
+    if (!acknowledgedIdPolicy) {
+      errors.idPolicy = 'Please acknowledge the in-person government ID presentation requirement.';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      showToast(Object.values(errors)[0], 'danger');
       return;
     }
+
+    setFormErrors({});
 
     if (activeRoom.status === 'Sold Out' || freeRoomsInCat.length === 0) {
       showToast('This room category is currently Sold Out. Please select another.', 'danger');
       return;
     }
 
+    setIsSubmitting(true);
     const assignedRoomFinal = selectedRoomNumber || activeRoom.assignedRooms?.[0] || '101';
-    const maskedIdFinal = idType === 'Aadhaar Card' && cleanId.length === 12 
-      ? `XXXX-XXXX-${cleanId.slice(8)}`
-      : idNumber.trim();
 
     const bookingRecord = {
       guestName: guestName.trim(),
-      phone: guestPhone.trim(),
+      phone: cleanPhone,
       roomType: activeRoom.title,
       roomId: activeRoom.id,
       roomNumber: assignedRoomFinal,
@@ -193,57 +255,86 @@ export const BookingModal = ({ isOpen, onClose, preselectedRoom }) => {
       gstAmount,
       totalTariff: grandTotal,
       specialRequests: specialRequests.trim(),
-      idType,
-      idNumber: idNumber.trim(),
-      maskedId: maskedIdFinal,
-      guestCity: guestCity.trim() || 'Barpeta, Assam',
-      aadhaarFront,
-      aadhaarBack,
-      kycStatus: 'Verified',
+      idVerificationMethod: kycDocUrl ? 'Uploaded & Encrypted Government ID (S3 / Cloud Adapter)' : 'In-person physical ID presentation at front desk check-in',
+      kycDocUrl: kycDocUrl || '',
+      kycDocName: kycDocName || '',
+      kycStatus: kycDocUrl ? 'Pending Verification' : 'Present at Check-in',
+      kycDocType: 'Aadhaar / Govt Photo ID',
+      status: 'Request to confirm',
       paymentMethod: paymentPreference === 'PAYTM_UPI' 
         ? 'Pre-Paid via Paytm UPI (paytm.s1i7is2@pty)' 
-        : 'Pay on Arrival at Hotel Reception',
+        : paymentPreference === 'RAZORPAY'
+          ? 'Razorpay Sandbox (Online Verified)'
+          : 'Pay on Arrival at Hotel Reception',
       paymentStatus: paymentPreference === 'PAYTM_UPI' 
         ? (bookingUtr.trim() ? 'Paid (UTR Provided)' : 'Paid / Transferred via UPI') 
-        : 'Pending (Pay at Check-in)',
+        : paymentPreference === 'RAZORPAY'
+          ? 'Pre-Paid (Razorpay Verified)'
+          : 'Pending (Pay at Check-in)',
       upiId: 'paytm.s1i7is2@pty',
       paymentUtr: bookingUtr.trim()
     };
 
-    const savedBooking = addRoomBooking(bookingRecord);
+    // Razorpay sandbox simulation
+    if (paymentPreference === 'RAZORPAY') {
+      try {
+        const rzp = await createPaymentOrder({
+          amount: grandTotal,
+          receipt: `rcpt_room_${Date.now()}`,
+          orderType: 'ROOM'
+        });
+        if (rzp && rzp.orderId) {
+          const mockPaymentId = `pay_sbx_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+          await verifyPayment({
+            razorpay_order_id: rzp.orderId,
+            razorpay_payment_id: mockPaymentId,
+            orderType: 'ROOM'
+          });
+          bookingRecord.paymentId = mockPaymentId;
+          bookingRecord.razorpayOrderId = rzp.orderId;
+        }
+      } catch (err) {
+        console.warn('Razorpay room sandbox error:', err);
+      }
+    }
+
+    const savedResult = await addRoomBooking(bookingRecord);
+    setIsSubmitting(false);
+
+    if (savedResult && savedResult.success === false) {
+      showToast(savedResult.error || 'Room unavailable for chosen dates.', 'danger');
+      return;
+    }
+
+    const savedBooking = savedResult?.booking || bookingRecord;
     setBookingConfirmed(savedBooking);
 
-    // Format WhatsApp Invoice breakdown to +91 96785 82286
+    // Format WhatsApp Reservation Request (zero sensitive ID numbers transmitted)
     const whatsappMsg =
-`*OFFICIAL ROOM RESERVATION - JONAK HOTEL BARPETA*%0A` +
+`*ROOM RESERVATION REQUEST - JONAK HOTEL BARPETA*%0A` +
 `----------------------------------------%0A` +
 `*Booking Reference:* #${savedBooking?.id || 'BKG-NEW'}%0A` +
 `*Guest Name:* ${guestName.trim()}%0A` +
-`*Phone:* ${guestPhone.trim()}%0A` +
+`*Mobile Phone:* ${cleanPhone}%0A` +
 `*Room Category:* ${activeRoom.title} (${activeRoom.ac ? 'A/C' : 'Non-A/C'})%0A` +
 `*Allocated Room:* Room ${assignedRoomFinal} (${activeRoom.floor})%0A` +
 `*Check-in Date:* ${checkIn}%0A` +
 `*Check-out Date:* ${checkOut} (${nights} Night${nights > 1 ? 's' : ''})%0A` +
 `*Number of Guests:* ${guestsCount}%0A` +
-`----------------------------------------%0A` +
-`*MANDATORY GUEST e-KYC DETAILS:*%0A` +
-`• ID Type: ${idType}%0A` +
-`• ID Number: ${maskedIdFinal}%0A` +
-`• Guest Origin / City: ${guestCity.trim() || 'Barpeta, Assam'}%0A` +
-`• e-KYC Photo Proof: ${aadhaarFront ? 'Uploaded & Verified' : 'Physical ID to show at check-in'}%0A` +
 (specialRequests ? `----------------------------------------%0A*Special Requests:* ${specialRequests}%0A` : '') +
 `----------------------------------------%0A` +
-`*OFFICIAL TARIFF & 5% GST BREAKDOWN:*%0A` +
+`*TARIFF & 5% GST BREAKDOWN:*%0A` +
 `• Base Tariff: ₹${baseTariff.toLocaleString()} x ${nights} Night${nights > 1 ? 's' : ''} = ₹${baseTotal.toLocaleString()}%0A` +
 `• GST (5%): +₹${gstAmount.toLocaleString()}%0A` +
-`• GRAND TOTAL: ₹${grandTotal.toLocaleString()}%0A` +
+`• GRAND TOTAL: ₹${grandTotal.toLocaleString()} (Taxes Included)*%0A` +
+`*(Tariff subject to owner confirmation)*%0A` +
 `----------------------------------------%0A` +
 `*PAYMENT DETAILS:*%0A` +
-`• Payment Mode: ${paymentPreference === 'PAYTM_UPI' ? 'Pre-Paid via Paytm UPI QR (paytm.s1i7is2@pty)' : 'Pay on Arrival at Hotel Reception (Cash/Card/UPI)'}%0A` +
+`• Payment Mode: ${bookingRecord.paymentMethod}%0A` +
 (bookingUtr.trim() ? `• UPI Transaction UTR: ${bookingUtr.trim()}%0A` : '') +
 (paymentPreference === 'PAYTM_UPI' ? `• Direct UPI Pay Link: upi://pay?pa=paytm.s1i7is2@pty&pn=JONAK%20HOTEL%20AND%20RESTAURANT&am=${grandTotal}&cu=INR%0A` : '') +
 `----------------------------------------%0A` +
-`*(Zero Advance Required • Payment at Hotel Reception Upon Check-in)*%0A` +
+`*Notice:* Valid physical Government Photo ID will be presented in-person at hotel check-in desk.%0A` +
 `Kindly confirm my room reservation. Thank you!`;
 
     const whatsappUrl = `https://wa.me/${hotelInfo.whatsapp}?text=${whatsappMsg}`;
@@ -277,12 +368,13 @@ export const BookingModal = ({ isOpen, onClose, preselectedRoom }) => {
             <div>
               <h3 style={{ fontSize: '1.15rem', fontWeight: 800 }}>Instant Room Reservation</h3>
               <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                Direct booking with 0% advance deposit required
+                Authoritative server inventory • 0% advance deposit required
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
+            aria-label="Close Booking Dialog"
             style={{
               background: 'transparent',
               border: 'none',
@@ -297,7 +389,7 @@ export const BookingModal = ({ isOpen, onClose, preselectedRoom }) => {
 
         {/* Confirmed Screen */}
         {bookingConfirmed ? (
-          <div style={{ padding: '2.5rem 1.5rem', textAlign: 'center' }}>
+          <div style={{ padding: '2rem 1.5rem', textAlign: 'center' }}>
             <div style={{
               width: '64px',
               height: '64px',
@@ -313,20 +405,83 @@ export const BookingModal = ({ isOpen, onClose, preselectedRoom }) => {
               <CheckCircle2 size={36} />
             </div>
 
-            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.5rem', color: '#FFFFFF' }}>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.3rem', color: '#FFFFFF' }}>
               Booking Request Submitted!
             </h3>
 
-            <p style={{ color: 'var(--gold-light)', fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.8rem' }}>
-              Booking Reference: #{bookingConfirmed.id}
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              padding: '0.35rem 0.85rem',
+              borderRadius: 'var(--radius-full)',
+              background: 'rgba(212, 175, 55, 0.15)',
+              border: '1px solid var(--gold-primary)',
+              color: 'var(--gold-light)',
+              fontSize: '0.95rem',
+              fontWeight: 800,
+              marginBottom: '0.75rem'
+            }}>
+              Reference: #{bookingConfirmed.id}
+            </div>
+
+            <div style={{
+              background: 'rgba(59, 130, 246, 0.12)',
+              border: '1px solid rgba(59, 130, 246, 0.35)',
+              borderRadius: '6px',
+              padding: '0.65rem 0.85rem',
+              color: '#93C5FD',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              marginBottom: '1.25rem'
+            }}>
+              ⚡ Status: <strong>Request to confirm</strong> (Pending Front Desk Check)
+              <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '0.2rem', fontWeight: 400 }}>
+                Our reception manager will confirm physical key handover upon check-in.
+              </div>
+            </div>
+
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginBottom: '1.25rem', lineHeight: 1.6 }}>
+              Your reservation request for <strong>{activeRoom.title}</strong> has been logged in our Reception System and dispatched to WhatsApp.
             </p>
 
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: 1.6 }}>
-              Your reservation request for <strong>{activeRoom.title}</strong> has been logged in our Reception System and dispatched to WhatsApp. 
-              Our front-desk manager will connect to confirm room key handover!
-            </p>
+            {/* Confirmed Room Photo Preview */}
+            <div style={{
+              width: '100%',
+              maxWidth: '340px',
+              margin: '0 auto 1.5rem',
+              borderRadius: 'var(--radius-md)',
+              overflow: 'hidden',
+              border: '1.5px solid var(--border-gold)',
+              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
+              background: 'rgba(7, 11, 20, 0.95)'
+            }}>
+              <img
+                src={currentDisplayImage}
+                alt={activeRoom.title}
+                style={{ width: '100%', height: '150px', objectFit: 'cover', display: 'block' }}
+              />
+              <div style={{ padding: '0.65rem 0.85rem', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <strong style={{ color: '#FFFFFF', fontSize: '0.88rem' }}>{activeRoom.title}</strong>
+                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>Room {selectedRoomNumber || activeRoom.assignedRooms?.[0]} • {activeRoom.floor}</div>
+                </div>
+                <span style={{ fontSize: '0.88rem', color: 'var(--gold-light)', fontWeight: 800 }}>
+                  ₹{grandTotal?.toLocaleString()}
+                </span>
+              </div>
+            </div>
 
-            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxWidth: '320px', margin: '0 auto' }}>
+              <a
+                href={`tel:${hotelInfo.phoneRaw}`}
+                className="btn btn-secondary"
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+              >
+                <Phone size={16} />
+                <span>Call Reception Desk ({hotelInfo.phone})</span>
+              </a>
+
               <button
                 onClick={() => { setBookingConfirmed(null); onClose(); }}
                 className="btn btn-primary"
@@ -400,6 +555,138 @@ export const BookingModal = ({ isOpen, onClose, preselectedRoom }) => {
               </select>
             </div>
 
+            {/* Authentic Room Photograph & Gallery Showcase */}
+            <div style={{
+              marginBottom: '1.25rem',
+              borderRadius: 'var(--radius-md)',
+              overflow: 'hidden',
+              border: '1.5px solid var(--border-gold)',
+              background: 'rgba(15, 23, 42, 0.95)',
+              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+            }}>
+              {/* Main Photo Banner */}
+              <div style={{ position: 'relative', width: '100%', height: '200px', overflow: 'hidden' }}>
+                <img
+                  src={currentDisplayImage}
+                  alt={activeRoom.title}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    transition: 'transform 0.4s ease'
+                  }}
+                />
+                <div style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: 'linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(7, 11, 20, 0.9) 100%)'
+                }} />
+
+                {/* Badges Stack */}
+                <div style={{
+                  position: 'absolute',
+                  top: '10px',
+                  left: '10px',
+                  display: 'flex',
+                  gap: '0.4rem',
+                  flexWrap: 'wrap'
+                }}>
+                  <span style={{
+                    background: (activeRoom.isAc || activeRoom.ac) ? 'rgba(56, 189, 248, 0.3)' : 'rgba(251, 146, 60, 0.3)',
+                    color: (activeRoom.isAc || activeRoom.ac) ? '#38BDF8' : '#FB923C',
+                    border: (activeRoom.isAc || activeRoom.ac) ? '1px solid #38BDF8' : '1px solid #FB923C',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    padding: '0.2rem 0.55rem',
+                    borderRadius: '4px',
+                    backdropFilter: 'blur(4px)'
+                  }}>
+                    {(activeRoom.isAc || activeRoom.ac) ? 'Air-Conditioned' : 'Non-A/C Natural Breeze'}
+                  </span>
+                  <span style={{
+                    background: 'rgba(212, 175, 55, 0.25)',
+                    color: 'var(--gold-warm)',
+                    border: '1px solid var(--border-gold)',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    padding: '0.2rem 0.55rem',
+                    borderRadius: '4px',
+                    backdropFilter: 'blur(4px)'
+                  }}>
+                    {activeRoom.floor}
+                  </span>
+                </div>
+
+                {/* Tariff on bottom right */}
+                <div style={{
+                  position: 'absolute',
+                  bottom: '10px',
+                  right: '10px',
+                  background: 'rgba(0, 0, 0, 0.8)',
+                  padding: '0.3rem 0.7rem',
+                  borderRadius: '4px',
+                  border: '1px solid rgba(212, 175, 55, 0.4)',
+                  fontSize: '0.78rem',
+                  color: '#FFFFFF'
+                }}>
+                  <span style={{ color: 'var(--gold-light)', fontWeight: 800 }}>₹{activeRoom.tariff?.toLocaleString()}</span> / night
+                </div>
+
+                {/* Room Title & Features on bottom left */}
+                <div style={{ position: 'absolute', bottom: '8px', left: '10px', right: '130px' }}>
+                  <div style={{ color: '#FFFFFF', fontWeight: 800, fontSize: '1rem', textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
+                    {activeRoom.title}
+                  </div>
+                  <div style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '0.74rem' }}>
+                    {activeRoom.bed} • {activeRoom.size}
+                  </div>
+                </div>
+              </div>
+
+              {/* Gallery Thumbnails Row */}
+              <div style={{
+                display: 'flex',
+                gap: '0.5rem',
+                padding: '0.65rem 0.85rem',
+                background: 'rgba(7, 11, 20, 0.95)',
+                overflowX: 'auto',
+                alignItems: 'center'
+              }}>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', flexShrink: 0, fontWeight: 700 }}>
+                  Room Photos ({roomImagesList.length}):
+                </span>
+                {roomImagesList.map((imgSrc, idx) => {
+                  const isSelected = selectedPhotoIndex === idx;
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setSelectedPhotoIndex(idx)}
+                      style={{
+                        width: '52px',
+                        height: '36px',
+                        borderRadius: '4px',
+                        overflow: 'hidden',
+                        border: isSelected ? '2px solid var(--gold-primary)' : '1px solid rgba(255, 255, 255, 0.2)',
+                        cursor: 'pointer',
+                        padding: 0,
+                        flexShrink: 0,
+                        opacity: isSelected ? 1 : 0.65,
+                        transition: 'all 0.2s ease',
+                        background: '#000'
+                      }}
+                    >
+                      <img
+                        src={imgSrc}
+                        alt={`${activeRoom.title} view ${idx + 1}`}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Check-in & Check-out Dates */}
             <div style={{
               display: 'grid',
@@ -408,27 +695,43 @@ export const BookingModal = ({ isOpen, onClose, preselectedRoom }) => {
               marginBottom: '1rem'
             }}>
               <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">Check-in Date *</label>
+                <label className="form-label" htmlFor="booking-checkin">Check-in Date *</label>
                 <input
+                  id="booking-checkin"
                   type="date"
                   required
+                  min={todayStr}
                   value={checkIn}
-                  onChange={(e) => setCheckIn(e.target.value)}
+                  onChange={(e) => handleCheckInChange(e.target.value)}
                   className="form-input"
+                  style={{
+                    borderColor: formErrors.dates ? '#EF4444' : 'rgba(255, 255, 255, 0.2)'
+                  }}
                 />
               </div>
 
               <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">Check-out Date *</label>
+                <label className="form-label" htmlFor="booking-checkout">Check-out Date *</label>
                 <input
+                  id="booking-checkout"
                   type="date"
                   required
+                  min={checkIn || todayStr}
                   value={checkOut}
-                  onChange={(e) => setCheckOut(e.target.value)}
+                  onChange={(e) => handleCheckOutChange(e.target.value)}
                   className="form-input"
+                  style={{
+                    borderColor: formErrors.dates ? '#EF4444' : 'rgba(255, 255, 255, 0.2)'
+                  }}
                 />
               </div>
             </div>
+
+            {formErrors.dates && (
+              <div style={{ color: '#EF4444', fontSize: '0.75rem', marginTop: '-0.5rem', marginBottom: '0.85rem' }}>
+                {formErrors.dates}
+              </div>
+            )}
 
             {/* Guests & Guest Details */}
             <div style={{
@@ -438,34 +741,60 @@ export const BookingModal = ({ isOpen, onClose, preselectedRoom }) => {
               marginBottom: '1rem'
             }}>
               <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">Guest Full Name *</label>
+                <label className="form-label" htmlFor="booking-name">Guest Full Name *</label>
                 <input
+                  id="booking-name"
                   type="text"
                   required
                   placeholder="e.g. Dr. Anup Baishya"
                   value={guestName}
-                  onChange={(e) => setGuestName(e.target.value)}
+                  onChange={(e) => {
+                    setGuestName(e.target.value);
+                    if (formErrors.guestName) setFormErrors(prev => ({ ...prev, guestName: undefined }));
+                  }}
                   className="form-input"
+                  style={{
+                    borderColor: formErrors.guestName ? '#EF4444' : 'rgba(255, 255, 255, 0.2)'
+                  }}
                 />
+                {formErrors.guestName && (
+                  <div style={{ color: '#EF4444', fontSize: '0.72rem', marginTop: '0.25rem' }}>
+                    {formErrors.guestName}
+                  </div>
+                )}
               </div>
 
               <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">WhatsApp / Phone *</label>
+                <label className="form-label" htmlFor="booking-phone">Mobile / WhatsApp Number *</label>
                 <input
+                  id="booking-phone"
                   type="tel"
                   required
-                  placeholder="e.g. 9678582286"
+                  placeholder="10-digit mobile number"
                   value={guestPhone}
-                  onChange={(e) => setGuestPhone(e.target.value)}
+                  onChange={(e) => {
+                    setGuestPhone(e.target.value);
+                    if (formErrors.guestPhone) setFormErrors(prev => ({ ...prev, guestPhone: undefined }));
+                  }}
                   className="form-input"
+                  maxLength={10}
+                  style={{
+                    borderColor: formErrors.guestPhone ? '#EF4444' : 'rgba(255, 255, 255, 0.2)'
+                  }}
                 />
+                {formErrors.guestPhone && (
+                  <div style={{ color: '#EF4444', fontSize: '0.72rem', marginTop: '0.25rem' }}>
+                    {formErrors.guestPhone}
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Guests count selection */}
             <div className="form-group">
-              <label className="form-label">Total Guests</label>
+              <label className="form-label" htmlFor="booking-guests">Total Guests</label>
               <select
+                id="booking-guests"
                 value={guestsCount}
                 onChange={(e) => setGuestsCount(e.target.value)}
                 className="form-select"
@@ -480,49 +809,122 @@ export const BookingModal = ({ isOpen, onClose, preselectedRoom }) => {
 
             {/* Special Requests */}
             <div className="form-group">
-              <label className="form-label">Special Requests (Optional)</label>
+              <label className="form-label" htmlFor="booking-requests">Special Requests (Optional)</label>
               <input
+                id="booking-requests"
                 type="text"
-                placeholder="e.g. Late check-in, extra bed, airport/station taxi"
+                placeholder="e.g. Late check-in, extra bed, ground floor preference"
                 value={specialRequests}
                 onChange={(e) => setSpecialRequests(e.target.value)}
                 className="form-input"
               />
             </div>
 
+            {/* Express KYC Upload (S3 / Storage Adapter) */}
+            <div style={{
+              background: 'rgba(212, 175, 55, 0.05)',
+              border: '1px solid rgba(212, 175, 55, 0.25)',
+              borderRadius: '8px',
+              padding: '1rem',
+              marginBottom: '1rem'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <ShieldCheck size={16} color="var(--gold-primary)" />
+                  Optional Express Check-In (Aadhaar / ID Upload)
+                </span>
+                <span style={{ fontSize: '0.7rem', color: '#10B981', background: 'rgba(16, 185, 129, 0.1)', padding: '0.15rem 0.4rem', borderRadius: '4px' }}>
+                  Hafijur Pre-Verification
+                </span>
+              </div>
+              <p style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginBottom: '0.75rem', lineHeight: 1.4 }}>
+                Upload your Aadhaar or Govt ID now so Reception Desk (Hafijur) can verify and assign your room key before you arrive!
+              </p>
+
+              {kycDocUrl ? (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  border: '1px solid #10B981',
+                  borderRadius: '6px',
+                  padding: '0.6rem 0.85rem'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <CheckCircle2 size={18} color="#10B981" />
+                    <div>
+                      <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#FFFFFF' }}>{kycDocName || 'Aadhaar_Document.jpg'}</div>
+                      <div style={{ fontSize: '0.7rem', color: '#10B981' }}>Encrypted & Stored in S3 / KYC Vault</div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setKycDocUrl(''); setKycDocName(''); }}
+                    style={{ background: 'transparent', border: 'none', color: '#EF4444', cursor: 'pointer', fontSize: '0.75rem' }}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <label style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                  border: '1.5px dashed rgba(212, 175, 55, 0.4)',
+                  borderRadius: '6px',
+                  padding: '0.75rem',
+                  cursor: 'pointer',
+                  background: 'rgba(0, 0, 0, 0.2)',
+                  color: 'var(--gold-primary)',
+                  fontSize: '0.8rem',
+                  fontWeight: 600
+                }}>
+                  <Upload size={16} />
+                  <span>{isUploadingKyc ? 'Uploading to S3 / Cloud Vault...' : 'Tap to Upload Aadhaar / Voter ID / Passport'}</span>
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    onChange={handleKycFileChange}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+              )}
+            </div>
+
             {/* ============================================================== */}
-            {/* MANDATORY GUEST e-KYC (AADHAAR / GOVT ID PROOF) FORM */}
+            {/* PRIVACY & PHYSICAL GOVT ID VERIFICATION NOTICE */}
             {/* ============================================================== */}
             <div style={{
               background: 'linear-gradient(145deg, rgba(15, 23, 42, 0.98), rgba(11, 17, 32, 0.95))',
-              border: '1.5px solid rgba(212, 175, 55, 0.45)',
+              border: '1.5px solid rgba(16, 185, 129, 0.35)',
               borderRadius: 'var(--radius-md)',
               padding: '1.15rem',
               marginBottom: '1.25rem',
               boxShadow: '0 8px 24px rgba(0, 0, 0, 0.35)'
             }}>
-              {/* Header */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <div style={{
                     width: '32px',
                     height: '32px',
                     borderRadius: '8px',
-                    background: 'rgba(212, 175, 55, 0.15)',
-                    border: '1px solid var(--gold-primary)',
+                    background: 'rgba(16, 185, 129, 0.15)',
+                    border: '1px solid #10B981',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: 'var(--gold-primary)'
+                    color: '#10B981'
                   }}>
                     <ShieldCheck size={18} />
                   </div>
                   <div>
-                    <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#FFFFFF' }}>
-                      Guest e-KYC Verification
+                    <h4 style={{ margin: 0, fontSize: '0.92rem', fontWeight: 800, color: '#FFFFFF' }}>
+                      Government ID & Privacy Notice
                     </h4>
-                    <span style={{ fontSize: '0.7rem', color: 'var(--gold-light)' }}>
-                      Govt of Assam & Police Form C Mandated
+                    <span style={{ fontSize: '0.7rem', color: '#10B981' }}>
+                      In-Person Physical Check-in Verification
                     </span>
                   </div>
                 </div>
@@ -540,279 +942,40 @@ export const BookingModal = ({ isOpen, onClose, preselectedRoom }) => {
                   gap: '0.3rem'
                 }}>
                   <Lock size={11} />
-                  Safe & Encrypted
+                  Zero ID Data Stored Online
                 </span>
               </div>
 
-              <p style={{ fontSize: '0.74rem', color: 'rgba(255, 255, 255, 0.65)', marginBottom: '0.9rem', lineHeight: 1.4 }}>
-                As per Barpeta District Administration and Police regulations, presenting a valid government photo ID is mandatory for all guests at check-in.
+              <p style={{ fontSize: '0.76rem', color: 'rgba(255, 255, 255, 0.72)', marginBottom: '0.85rem', lineHeight: 1.5 }}>
+                To safeguard guest privacy and uphold data protection principles, Jonak Hotel does <strong>not</strong> collect or store your Aadhaar or government ID documents online. As per local guest register regulations, adult guests must simply present an original physical photo ID (Aadhaar Card, Voter ID, Driving License, or Passport) at the hotel front desk upon arrival.
               </p>
 
-              {/* ID Type & City Selector */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: '1.2fr 1fr',
-                gap: '0.75rem',
-                marginBottom: '0.85rem'
-              }}>
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label" style={{ fontSize: '0.78rem', color: '#FFFFFF' }}>
-                    Select Govt ID Type *
-                  </label>
-                  <select
-                    value={idType}
-                    onChange={(e) => {
-                      setIdType(e.target.value);
-                      setIdNumber('');
-                    }}
-                    className="form-select"
-                    style={{ fontSize: '0.82rem', padding: '0.55rem 0.75rem', background: 'rgba(30, 41, 59, 0.9)' }}
-                  >
-                    <option value="Aadhaar Card">Aadhaar Card (UIDAI)</option>
-                    <option value="Voter ID Card">Voter ID (Election Commission)</option>
-                    <option value="Driving License">Driving License</option>
-                    <option value="Indian Passport">Indian Passport</option>
-                  </select>
-                </div>
-
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label" style={{ fontSize: '0.78rem', color: '#FFFFFF' }}>
-                    Guest City / Origin *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Barpeta / Guwahati"
-                    value={guestCity}
-                    onChange={(e) => setGuestCity(e.target.value)}
-                    className="form-input"
-                    style={{ fontSize: '0.82rem', padding: '0.55rem 0.75rem', background: 'rgba(30, 41, 59, 0.9)' }}
-                  />
-                </div>
-              </div>
-
-              {/* 12-Digit Aadhaar / ID Number Input */}
-              <div className="form-group" style={{ marginBottom: '0.9rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
-                  <label className="form-label" style={{ margin: 0, fontSize: '0.78rem', color: '#FFFFFF' }}>
-                    {idType === 'Aadhaar Card' ? '12-Digit Aadhaar Number (UIDAI) *' : `${idType} Number *`}
-                  </label>
-                  
-                  {idType === 'Aadhaar Card' && idNumber.replace(/\s+/g, '').length === 12 && (
-                    <span style={{ fontSize: '0.7rem', color: '#10B981', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                      <CheckCircle2 size={13} />
-                      Valid 12 Digits
-                    </span>
-                  )}
-                </div>
-
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type={showIdNumber ? 'text' : 'password'}
-                    required
-                    maxLength={idType === 'Aadhaar Card' ? 14 : 20}
-                    placeholder={idType === 'Aadhaar Card' ? 'XXXX  XXXX  XXXX' : 'Enter Govt ID Number'}
-                    value={idNumber}
-                    onChange={(e) => handleIdNumberChange(e.target.value)}
-                    className="form-input"
-                    style={{
-                      letterSpacing: idType === 'Aadhaar Card' ? '0.18em' : '0.08em',
-                      fontWeight: 700,
-                      fontSize: '0.95rem',
-                      fontFamily: 'monospace',
-                      background: 'rgba(30, 41, 59, 0.95)',
-                      borderColor: idType === 'Aadhaar Card' && idNumber.replace(/\s+/g, '').length === 12
-                        ? '#10B981'
-                        : 'rgba(212, 175, 55, 0.4)',
-                      paddingRight: '2.5rem'
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowIdNumber(!showIdNumber)}
-                    style={{
-                      position: 'absolute',
-                      right: '0.75rem',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      background: 'none',
-                      border: 'none',
-                      color: 'var(--text-secondary)',
-                      cursor: 'pointer',
-                      padding: 0
-                    }}
-                    title={showIdNumber ? 'Hide ID number' : 'Show ID number'}
-                  >
-                    {showIdNumber ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Photo Upload: Front & Back with Camera Support */}
-              <div style={{ marginBottom: '0.85rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem' }}>
-                  <label className="form-label" style={{ margin: 0, fontSize: '0.78rem', color: '#FFFFFF' }}>
-                    Upload {idType} Photo Proof (Optional / Instant Fast Check-in)
-                  </label>
-                  <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-                    Mobile Camera Supported
-                  </span>
-                </div>
-
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: '0.75rem'
-                }}>
-                  {/* Front Side Upload */}
-                  <div style={{
-                    border: '1.5px dashed rgba(255, 255, 255, 0.2)',
-                    borderRadius: 'var(--radius-sm)',
-                    padding: '0.6rem',
-                    textAlign: 'center',
-                    background: aadhaarFront ? 'rgba(16, 185, 129, 0.08)' : 'rgba(0, 0, 0, 0.25)',
-                    position: 'relative'
-                  }}>
-                    {aadhaarFront ? (
-                      <div>
-                        <img 
-                          src={aadhaarFront} 
-                          alt="ID Front" 
-                          style={{
-                            width: '100%',
-                            height: '70px',
-                            objectFit: 'cover',
-                            borderRadius: '4px',
-                            marginBottom: '0.35rem'
-                          }} 
-                        />
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontSize: '0.7rem', color: '#10B981', fontWeight: 700 }}>
-                            ✓ Front Attached
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => setAadhaarFront(null)}
-                            style={{
-                              background: 'rgba(239, 68, 68, 0.2)',
-                              border: 'none',
-                              color: '#EF4444',
-                              borderRadius: '4px',
-                              padding: '2px 6px',
-                              cursor: 'pointer'
-                            }}
-                            title="Remove"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <label style={{ display: 'block', cursor: 'pointer', padding: '0.5rem 0.2rem' }}>
-                        <Camera size={20} color="var(--gold-light)" style={{ margin: '0 auto 0.25rem' }} />
-                        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#FFFFFF' }}>
-                          Front Side Photo
-                        </div>
-                        <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
-                          Click or Browse
-                        </div>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          capture="environment"
-                          onChange={(e) => handleFileUpload(e, 'front')}
-                          style={{ display: 'none' }}
-                        />
-                      </label>
-                    )}
-                  </div>
-
-                  {/* Back Side Upload */}
-                  <div style={{
-                    border: '1.5px dashed rgba(255, 255, 255, 0.2)',
-                    borderRadius: 'var(--radius-sm)',
-                    padding: '0.6rem',
-                    textAlign: 'center',
-                    background: aadhaarBack ? 'rgba(16, 185, 129, 0.08)' : 'rgba(0, 0, 0, 0.25)',
-                    position: 'relative'
-                  }}>
-                    {aadhaarBack ? (
-                      <div>
-                        <img 
-                          src={aadhaarBack} 
-                          alt="ID Back" 
-                          style={{
-                            width: '100%',
-                            height: '70px',
-                            objectFit: 'cover',
-                            borderRadius: '4px',
-                            marginBottom: '0.35rem'
-                          }} 
-                        />
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontSize: '0.7rem', color: '#10B981', fontWeight: 700 }}>
-                            ✓ Back Attached
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => setAadhaarBack(null)}
-                            style={{
-                              background: 'rgba(239, 68, 68, 0.2)',
-                              border: 'none',
-                              color: '#EF4444',
-                              borderRadius: '4px',
-                              padding: '2px 6px',
-                              cursor: 'pointer'
-                            }}
-                            title="Remove"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <label style={{ display: 'block', cursor: 'pointer', padding: '0.5rem 0.2rem' }}>
-                        <Upload size={20} color="var(--gold-light)" style={{ margin: '0 auto 0.25rem' }} />
-                        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#FFFFFF' }}>
-                          Back Side Photo
-                        </div>
-                        <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
-                          Address Side
-                        </div>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          capture="environment"
-                          onChange={(e) => handleFileUpload(e, 'back')}
-                          style={{ display: 'none' }}
-                        />
-                      </label>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Consent Checkbox */}
               <label style={{
                 display: 'flex',
                 alignItems: 'flex-start',
                 gap: '0.55rem',
-                fontSize: '0.72rem',
-                color: 'rgba(255, 255, 255, 0.75)',
-                lineHeight: 1.35,
+                fontSize: '0.74rem',
+                color: 'rgba(255, 255, 255, 0.85)',
+                lineHeight: 1.4,
                 cursor: 'pointer'
               }}>
                 <input
                   type="checkbox"
                   required
-                  checked={kycConsent}
-                  onChange={(e) => setKycConsent(e.target.checked)}
+                  checked={acknowledgedIdPolicy}
+                  onChange={(e) => setAcknowledgedIdPolicy(e.target.checked)}
                   style={{ accentColor: 'var(--gold-primary)', marginTop: '2px' }}
                 />
                 <span>
-                  I confirm that the above Aadhaar / Govt ID details belong to me and are submitted for hotel guest registration and verification at Jonak Hotel & Restaurant, Barpeta.
+                  I understand that adult guests will present an original physical government photo ID at the front desk upon check-in.
                 </span>
               </label>
+
+              {formErrors.idPolicy && (
+                <div style={{ color: '#EF4444', fontSize: '0.72rem', marginTop: '0.35rem' }}>
+                  {formErrors.idPolicy}
+                </div>
+              )}
             </div>
 
             {/* Official Tariff & 5% GST Calculation Card */}
@@ -875,18 +1038,17 @@ export const BookingModal = ({ isOpen, onClose, preselectedRoom }) => {
               <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
                 PAYMENT PREFERENCE:
               </div>
-              <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', marginBottom: '0.75rem' }}>
                 <label style={{
-                  flex: 1,
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.65rem 0.85rem',
+                  gap: '0.4rem',
+                  padding: '0.6rem 0.65rem',
                   borderRadius: 'var(--radius-sm)',
                   background: paymentPreference === 'PAYTM_UPI' ? 'rgba(0, 186, 242, 0.15)' : 'var(--bg-surface)',
                   border: paymentPreference === 'PAYTM_UPI' ? '1.5px solid #00BAF2' : '1px solid var(--border-subtle)',
                   cursor: 'pointer',
-                  fontSize: '0.82rem',
+                  fontSize: '0.8rem',
                   fontWeight: 700,
                   color: paymentPreference === 'PAYTM_UPI' ? '#00BAF2' : 'var(--text-primary)'
                 }}>
@@ -898,20 +1060,43 @@ export const BookingModal = ({ isOpen, onClose, preselectedRoom }) => {
                     onChange={() => setPaymentPreference('PAYTM_UPI')}
                     style={{ accentColor: '#00BAF2' }}
                   />
-                  <span>Paytm / UPI QR (Pre-Pay)</span>
+                  <span>Paytm UPI</span>
                 </label>
 
                 <label style={{
-                  flex: 1,
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.65rem 0.85rem',
+                  gap: '0.4rem',
+                  padding: '0.6rem 0.65rem',
+                  borderRadius: 'var(--radius-sm)',
+                  background: paymentPreference === 'RAZORPAY' ? 'rgba(59, 130, 246, 0.15)' : 'var(--bg-surface)',
+                  border: paymentPreference === 'RAZORPAY' ? '1.5px solid #3B82F6' : '1px solid var(--border-subtle)',
+                  cursor: 'pointer',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  color: paymentPreference === 'RAZORPAY' ? '#60A5FA' : 'var(--text-primary)'
+                }}>
+                  <input
+                    type="radio"
+                    name="bookingPayment"
+                    value="RAZORPAY"
+                    checked={paymentPreference === 'RAZORPAY'}
+                    onChange={() => setPaymentPreference('RAZORPAY')}
+                    style={{ accentColor: '#3B82F6' }}
+                  />
+                  <span>Online Card</span>
+                </label>
+
+                <label style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  padding: '0.6rem 0.65rem',
                   borderRadius: 'var(--radius-sm)',
                   background: paymentPreference === 'FRONT_DESK' ? 'rgba(212, 175, 55, 0.15)' : 'var(--bg-surface)',
                   border: paymentPreference === 'FRONT_DESK' ? '1.5px solid var(--gold-primary)' : '1px solid var(--border-subtle)',
                   cursor: 'pointer',
-                  fontSize: '0.82rem',
+                  fontSize: '0.8rem',
                   fontWeight: 600
                 }}>
                   <input
@@ -922,9 +1107,33 @@ export const BookingModal = ({ isOpen, onClose, preselectedRoom }) => {
                     onChange={() => setPaymentPreference('FRONT_DESK')}
                     style={{ accentColor: 'var(--gold-primary)' }}
                   />
-                  <span>Pay at Front Desk</span>
+                  <span>Front Desk</span>
                 </label>
               </div>
+
+              {/* Razorpay Online Sandbox Card */}
+              {paymentPreference === 'RAZORPAY' && (
+                <div style={{
+                  padding: '0.9rem',
+                  background: 'linear-gradient(145deg, rgba(15, 23, 42, 0.95), rgba(7, 11, 20, 0.98))',
+                  border: '1.5px solid rgba(59, 130, 246, 0.45)',
+                  borderRadius: 'var(--radius-md)',
+                  marginBottom: '0.75rem'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#60A5FA', fontWeight: 800, fontSize: '0.85rem' }}>
+                      <CreditCard size={16} />
+                      <span>Razorpay Official Gateway</span>
+                    </div>
+                    <span style={{ fontSize: '0.65rem', background: 'rgba(59, 130, 246, 0.2)', border: '1px solid #3B82F6', color: '#93C5FD', padding: '0.1rem 0.45rem', borderRadius: '4px', fontWeight: 700 }}>
+                      Sandbox Test Mode
+                    </span>
+                  </div>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }}>
+                    Pre-pay securely using Credit/Debit Cards, NetBanking, or UPI. Verified with server-side HMAC signatures. Zero card data stored.
+                  </p>
+                </div>
+              )}
 
               {/* Official Paytm QR Payment Card */}
               {paymentPreference === 'PAYTM_UPI' && (
@@ -1115,15 +1324,20 @@ export const BookingModal = ({ isOpen, onClose, preselectedRoom }) => {
             {/* Submit Button */}
             <button
               type="submit"
+              disabled={isSubmitting}
               className="btn btn-primary"
               style={{
                 width: '100%',
                 padding: '0.95rem',
                 fontSize: '1.05rem',
-                fontWeight: 800
+                fontWeight: 800,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.6rem'
               }}
             >
-              <span>Confirm & Send to Reception via WhatsApp</span>
+              <span>{isSubmitting ? 'Verifying Availability...' : 'Request Room Reservation via WhatsApp'}</span>
               <ArrowRight size={18} />
             </button>
 

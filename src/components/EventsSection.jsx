@@ -17,6 +17,8 @@ import {
 export const EventsSection = () => {
   const { hotelInfo, events, addEventEnquiry, showToast } = useHotel();
 
+  const todayStr = new Date().toISOString().split('T')[0];
+
   // Quote form state
   const [eventType, setEventType] = useState('Birthday Party / Anniversary');
   const [guestCount, setGuestCount] = useState(50);
@@ -25,6 +27,7 @@ export const EventsSection = () => {
   const [contactName, setContactName] = useState('');
   const [contactPhone, setContactPhone] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [errors, setErrors] = useState({});
 
   // Approximate cost estimator per head based on options
   const estimatedCostPerGuest = cateringType.includes('Buffet') ? 450 : 250;
@@ -32,11 +35,29 @@ export const EventsSection = () => {
 
   const handleEventQuoteSubmit = (e) => {
     e.preventDefault();
+    const newErrors = {};
 
-    if (!contactName.trim() || !contactPhone.trim() || !eventDate) {
-      showToast('Please fill all required event details.', 'danger');
+    if (!contactName.trim() || contactName.trim().length < 2) {
+      newErrors.name = 'Please enter your full name (minimum 2 characters).';
+    }
+
+    const cleanPhone = contactPhone.replace(/\D/g, '');
+    const phoneRegex = /^[6-9]\d{9}$/;
+    if (!phoneRegex.test(cleanPhone)) {
+      newErrors.phone = 'Please enter a valid 10-digit mobile number.';
+    }
+
+    if (!eventDate || eventDate < todayStr) {
+      newErrors.date = 'Please select a valid future event date.';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      showToast(Object.values(newErrors)[0], 'danger');
       return;
     }
+
+    setErrors({});
 
     const enquiryRecord = {
       eventType,
@@ -44,7 +65,7 @@ export const EventsSection = () => {
       eventDate,
       cateringType,
       contactName: contactName.trim(),
-      contactPhone: contactPhone.trim(),
+      contactPhone: cleanPhone,
       estimatedBudget: estimatedTotal
     };
 
@@ -253,20 +274,32 @@ export const EventsSection = () => {
 
                 {/* Preferred Date */}
                 <div className="form-group">
-                  <label className="form-label">Preferred Event Date *</label>
+                  <label className="form-label" htmlFor="event-date">Preferred Event Date *</label>
                   <input
+                    id="event-date"
                     type="date"
                     required
+                    min={todayStr}
                     value={eventDate}
-                    onChange={(e) => setEventDate(e.target.value)}
+                    onChange={(e) => {
+                      setEventDate(e.target.value);
+                      if (errors.date) setErrors(prev => ({ ...prev, date: undefined }));
+                    }}
                     className="form-input"
+                    style={{ borderColor: errors.date ? '#EF4444' : undefined }}
                   />
+                  {errors.date && (
+                    <div style={{ color: '#EF4444', fontSize: '0.72rem', marginTop: '0.25rem' }}>
+                      {errors.date}
+                    </div>
+                  )}
                 </div>
 
                 {/* Catering Package */}
                 <div className="form-group">
-                  <label className="form-label">Catering & Dining Style</label>
+                  <label className="form-label" htmlFor="event-catering">Catering & Dining Style</label>
                   <select
+                    id="event-catering"
                     value={cateringType}
                     onChange={(e) => setCateringType(e.target.value)}
                     className="form-select"
@@ -281,27 +314,48 @@ export const EventsSection = () => {
                 {/* Contact Info */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1.25rem' }}>
                   <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label">Your Name *</label>
+                    <label className="form-label" htmlFor="event-name">Your Name *</label>
                     <input
+                      id="event-name"
                       type="text"
                       required
                       placeholder="e.g. Manash Roy"
                       value={contactName}
-                      onChange={(e) => setContactName(e.target.value)}
+                      onChange={(e) => {
+                        setContactName(e.target.value);
+                        if (errors.name) setErrors(prev => ({ ...prev, name: undefined }));
+                      }}
                       className="form-input"
+                      style={{ borderColor: errors.name ? '#EF4444' : undefined }}
                     />
+                    {errors.name && (
+                      <div style={{ color: '#EF4444', fontSize: '0.72rem', marginTop: '0.25rem' }}>
+                        {errors.name}
+                      </div>
+                    )}
                   </div>
 
                   <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label">Phone / WhatsApp *</label>
+                    <label className="form-label" htmlFor="event-phone">Phone / WhatsApp *</label>
                     <input
+                      id="event-phone"
                       type="tel"
                       required
-                      placeholder="e.g. 9864012345"
+                      placeholder="10-digit mobile"
+                      maxLength={10}
                       value={contactPhone}
-                      onChange={(e) => setContactPhone(e.target.value)}
+                      onChange={(e) => {
+                        setContactPhone(e.target.value);
+                        if (errors.phone) setErrors(prev => ({ ...prev, phone: undefined }));
+                      }}
                       className="form-input"
+                      style={{ borderColor: errors.phone ? '#EF4444' : undefined }}
                     />
+                    {errors.phone && (
+                      <div style={{ color: '#EF4444', fontSize: '0.72rem', marginTop: '0.25rem' }}>
+                        {errors.phone}
+                      </div>
+                    )}
                   </div>
                 </div>
 

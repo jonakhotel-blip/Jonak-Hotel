@@ -19,18 +19,28 @@ export const DeliveryDesk = () => {
   const { 
     orders, 
     updateOrderStatus, 
+    assignCourierToOrder,
     staffSession,
     showToast 
   } = useHotel();
 
   const [filterType, setFilterType] = useState('ACTIVE'); // 'ACTIVE' | 'COMPLETED'
 
-  // Filter deliveries & room service orders
-  const deliveryOrders = orders.filter(o => 
-    o.diningType === 'delivery' || o.isDelivery || (o.deliveryAddress && !o.roomNumber) || o.diningType === 'room_service'
-  );
+  const isPrivileged = staffSession?.role === 'owner' || staffSession?.role === 'manager';
+  const currentCourierId = staffSession?.userId || staffSession?.id || 'staff_default';
+  const currentCourierName = staffSession?.staffName || staffSession?.name || 'Staff Member';
 
-  const activeDeliveries = deliveryOrders.filter(o => o.status === 'Ready' || o.status === 'Cooking' || o.status === 'New');
+  // Role-segregated delivery filtering:
+  // Managers & Owners can oversee all deliveries across Barpeta.
+  // Delivery staff see only tasks assigned to them, plus unassigned pending orders they can claim.
+  const deliveryOrders = orders.filter(o => {
+    const isDeliveryKind = o.diningType === 'delivery' || o.mode === 'Home Delivery' || o.isDelivery || (o.deliveryAddress && !o.roomNumber) || o.diningType === 'room_service';
+    if (!isDeliveryKind) return false;
+    if (isPrivileged) return true;
+    return o.assignedStaffId === currentCourierId || o.assignedStaffName === currentCourierName || (!o.assignedStaffId && (o.status === 'Ready' || o.status === 'Preparing' || o.status === 'Received'));
+  });
+
+  const activeDeliveries = deliveryOrders.filter(o => o.status === 'Ready' || o.status === 'Preparing' || o.status === 'Cooking' || o.status === 'Received' || o.status === 'Out for Delivery');
   const completedDeliveries = deliveryOrders.filter(o => o.status === 'Delivered');
 
   // Stats today
@@ -38,6 +48,15 @@ export const DeliveryDesk = () => {
   const totalCashCollected = completedDeliveries
     .filter(o => !o.utrNumber && !o.paymentMethod?.toLowerCase().includes('upi'))
     .reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
+
+  const handleClaimOrder = async (orderId) => {
+    if (typeof assignCourierToOrder === 'function') {
+      await assignCourierToOrder(orderId, currentCourierId, currentCourierName);
+    } else {
+      updateOrderStatus(orderId, 'Out for Delivery');
+      showToast(`Order #${orderId} claimed by ${currentCourierName}!`, 'success');
+    }
+  };
 
   const handleMarkDelivered = (orderId) => {
     updateOrderStatus(orderId, 'Delivered');
@@ -70,6 +89,22 @@ export const DeliveryDesk = () => {
           <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
             Real-time delivery dispatch, 1-tap Google Maps navigation, phone dialer, and cash collection confirmation.
           </p>
+          <div style={{ marginTop: '0.5rem' }}>
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              padding: '0.25rem 0.65rem',
+              borderRadius: '4px',
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              background: isPrivileged ? 'rgba(212, 175, 55, 0.15)' : 'rgba(0, 186, 242, 0.15)',
+              color: isPrivileged ? 'var(--gold-warm)' : '#00BAF2',
+              border: `1px solid ${isPrivileged ? 'var(--border-gold)' : 'rgba(0, 186, 242, 0.3)'}`
+            }}>
+              <span>{isPrivileged ? '👑 Manager/Owner Mode: All Branch Tasks' : `🛵 Courier View: ${currentCourierName} (Assigned Tasks)`}</span>
+            </span>
+          </div>
         </div>
 
         {/* Delivery Counters */}
@@ -228,6 +263,41 @@ export const DeliveryDesk = () => {
                       <span>Open in Google Maps GPS Navigation</span>
                       <ExternalLink size={12} />
                     </a>
+                  </div>
+
+                  {/* Delivery Partner Assignment */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.5rem 0.75rem',
+                    background: 'rgba(212, 175, 55, 0.08)',
+                    borderRadius: '4px',
+                    border: '1px dashed rgba(212, 175, 55, 0.25)',
+                    marginBottom: '0.85rem',
+                    fontSize: '0.78rem'
+                  }}>
+                    <div>
+                      <span style={{ color: 'var(--text-muted)' }}>Assigned Partner: </span>
+                      <strong style={{ color: order.assignedStaffName ? '#FFFFFF' : '#FF9900' }}>
+                        {order.assignedStaffName || 'Unassigned'}
+                      </strong>
+                    </div>
+                    {(!order.assignedStaffId || order.assignedStaffId !== currentCourierId) && (
+                      <button
+                        onClick={() => handleClaimOrder(order.id)}
+                        className="btn btn-secondary"
+                        style={{
+                          padding: '0.25rem 0.55rem',
+                          fontSize: '0.72rem',
+                          background: 'rgba(212, 175, 55, 0.15)',
+                          color: 'var(--gold-light)',
+                          border: '1px solid var(--border-gold)'
+                        }}
+                      >
+                        Claim Task
+                      </button>
+                    )}
                   </div>
 
                   {/* Food Items & Amount */}

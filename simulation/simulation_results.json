@@ -1,0 +1,362 @@
+{
+  "simulationTimestamp": "2026-11-03T14:34:34.558Z",
+  "totalRounds": 15,
+  "totalAgents": 54,
+  "tariffTiersTested": {
+    "standardRoom": 1200,
+    "deluxeRoom": 2000,
+    "executiveSuite": 3200,
+    "dinnerPrebookDiscount": "15%"
+  },
+  "kpis": {
+    "totalRoomRevenue": 142800,
+    "totalFoodRevenue": 257062,
+    "totalPackageAddonRevenue": 6900,
+    "totalDinnerDiscountsGranted": 1518,
+    "grossTurnover": 406762,
+    "totalQrOrders": 433,
+    "totalManualAssisted": 101,
+    "totalWalkinDropoffs": 21,
+    "totalPrebookedDinners": 30,
+    "finalNpsScore": -34,
+    "finalStarRating": 2.24
+  },
+  "roundHistory": [
+    {
+      "round": 1,
+      "roundName": "Round 1 (Day 1 - 2)",
+      "occupancy": "9 / 10 Rooms (90%)",
+      "roomBookings": 9,
+      "foodOrders": 42,
+      "walkinDropoffs": 0,
+      "kitchenContentionPeak": 92,
+      "avgSatisfaction": "3.22",
+      "cumulativeGrossRevenue": 38789
+    },
+    {
+      "round": 2,
+      "roundName": "Round 2 (Day 3 - 4)",
+      "occupancy": "10 / 10 Rooms (100%)",
+      "roomBookings": 3,
+      "foodOrders": 37,
+      "walkinDropoffs": 0,
+      "kitchenContentionPeak": 81,
+      "avgSatisfaction": "2.96",
+      "cumulativeGrossRevenue": 60489
+    },
+    {
+      "round": 3,
+      "roundName": "Round 3 (Day 5 - 6) [Scenario B: Friday Rush Clash (35m SLA)]",
+      "occupancy": "10 / 10 Rooms (100%)",
+      "roomBookings": 5,
+      "foodOrders": 36,
+      "walkinDropoffs": 0,
+      "kitchenContentionPeak": 79,
+      "avgSatisfaction": "2.57",
+      "cumulativeGrossRevenue": 87606
+    },
+    {
+      "round": 4,
+      "roundName": "Round 4 (Day 7 - 8)",
+      "occupancy": "10 / 10 Rooms (100%)",
+      "roomBookings": 3,
+      "foodOrders": 37,
+      "walkinDropoffs": 0,
+      "kitchenContentionPeak": 81,
+      "avgSatisfaction": "2.58",
+      "cumulativeGrossRevenue": 115407
+    },
+    {
+      "round": 5,
+      "roundName": "Round 5 (Day 9 - 10) [Scenario A: Smart Combo Bundle Active]",
+      "occupancy": "10 / 10 Rooms (100%)",
+      "roomBookings": 5,
+      "foodOrders": 32,
+      "walkinDropoffs": 0,
+      "kitchenContentionPeak": 70,
+      "avgSatisfaction": "2.62",
+      "cumulativeGrossRevenue": 146208
+    },
+    {
+      "round": 6,
+      "roundName": "Round 6 (Day 11 - 12) [Scenario A: Smart Combo Bundle Active]",
+      "occupancy": "10 / 10 Rooms (100%)",
+      "roomBookings": 5,
+      "foodOrders": 35,
+      "walkinDropoffs": 0,
+      "kitchenContentionPeak": 77,
+      "avgSatisfaction": "2.67",
+      "cumulativeGrossRevenue": 175526
+    },
+    {
+      "round": 7,
+      "roundName": "Round 7 (Day 13 - 14) [Scenario A: Smart Combo Bundle Active] [Scenario B: Friday Rush Clash (35m SLA)]",
+      "occupancy": "10 / 10 Rooms (100%)",
+      "roomBookings": 3,
+      "foodOrders": 33,
+      "walkinDropoffs": 0,
+      "kitchenContentionPeak": 73,
+      "avgSatisfaction": "2.52",
+      "cumulativeGrossRevenue": 197582
+    },
+    {
+      "round": 8,
+      "roundName": "Round 8 (Day 15 - 16) [Scenario A: Smart Combo Bundle Active]",
+      "occupancy": "10 / 10 Rooms (100%)",
+      "roomBookings": 6,
+      "foodOrders": 34,
+      "walkinDropoffs": 0,
+      "kitchenContentionPeak": 75,
+      "avgSatisfaction": "2.56",
+      "cumulativeGrossRevenue": 231486
+    },
+    {
+      "round": 9,
+      "roundName": "Round 9 (Day 17 - 18)",
+      "occupancy": "10 / 10 Rooms (100%)",
+      "roomBookings": 3,
+      "foodOrders": 31,
+      "walkinDropoffs": 0,
+      "kitchenContentionPeak": 68,
+      "avgSatisfaction": "2.59",
+      "cumulativeGrossRevenue": 252146
+    },
+    {
+      "round": 10,
+      "roundName": "Round 10 (Day 19 - 20)",
+      "occupancy": "10 / 10 Rooms (100%)",
+      "roomBookings": 4,
+      "foodOrders": 34,
+      "walkinDropoffs": 0,
+      "kitchenContentionPeak": 75,
+      "avgSatisfaction": "2.63",
+      "cumulativeGrossRevenue": 278224
+    },
+    {
+      "round": 11,
+      "roundName": "Round 11 (Day 21 - 22) [Scenario B: Friday Rush Clash (35m SLA)]",
+      "occupancy": "10 / 10 Rooms (100%)",
+      "roomBookings": 3,
+      "foodOrders": 38,
+      "walkinDropoffs": 0,
+      "kitchenContentionPeak": 84,
+      "avgSatisfaction": "2.36",
+      "cumulativeGrossRevenue": 303314
+    },
+    {
+      "round": 12,
+      "roundName": "Round 12 (Day 23 - 24) [Scenario C: Strict 100% QR Mandatory]",
+      "occupancy": "10 / 10 Rooms (100%)",
+      "roomBookings": 3,
+      "foodOrders": 30,
+      "walkinDropoffs": 6,
+      "kitchenContentionPeak": 66,
+      "avgSatisfaction": "2.41",
+      "cumulativeGrossRevenue": 324620
+    },
+    {
+      "round": 13,
+      "roundName": "Round 13 (Day 25 - 26) [Scenario C: Strict 100% QR Mandatory]",
+      "occupancy": "10 / 10 Rooms (100%)",
+      "roomBookings": 3,
+      "foodOrders": 31,
+      "walkinDropoffs": 6,
+      "kitchenContentionPeak": 68,
+      "avgSatisfaction": "2.45",
+      "cumulativeGrossRevenue": 342225
+    },
+    {
+      "round": 14,
+      "roundName": "Round 14 (Day 27 - 28) [Scenario C: Strict 100% QR Mandatory]",
+      "occupancy": "10 / 10 Rooms (100%)",
+      "roomBookings": 7,
+      "foodOrders": 34,
+      "walkinDropoffs": 9,
+      "kitchenContentionPeak": 75,
+      "avgSatisfaction": "2.50",
+      "cumulativeGrossRevenue": 376293
+    },
+    {
+      "round": 15,
+      "roundName": "Round 15 (Day 29 - 30) [Scenario B: Friday Rush Clash (35m SLA)] [Scenario C-Fix: Staff-Assisted QR Proxy Active]",
+      "occupancy": "10 / 10 Rooms (100%)",
+      "roomBookings": 4,
+      "foodOrders": 43,
+      "walkinDropoffs": 0,
+      "kitchenContentionPeak": 95,
+      "avgSatisfaction": "2.24",
+      "cumulativeGrossRevenue": 406762
+    }
+  ],
+  "infoPlazaSamplePosts": [
+    {
+      "round": 15,
+      "agentId": "AGT-YTH-10",
+      "author": "Shahil & Asif",
+      "rating": 1,
+      "platform": "Google Reviews / Swiggy / In-App",
+      "post": "Food quality is authentic Assamese taste, but Friday evening wait time was 56 minutes! Digital QR ordering gave ticket instantly, but kitchen line cooks took too long to serve."
+    },
+    {
+      "round": 15,
+      "agentId": "AGT-YTH-11",
+      "author": "Rupjyoti Talukdar",
+      "rating": 1,
+      "platform": "Google Reviews / Swiggy / In-App",
+      "post": "Food quality is authentic Assamese taste, but Friday evening wait time was 57 minutes! Digital QR ordering gave ticket instantly, but kitchen line cooks took too long to serve."
+    },
+    {
+      "round": 15,
+      "agentId": "AGT-YTH-12",
+      "author": "Partha Pratim",
+      "rating": 1,
+      "platform": "Google Reviews / Swiggy / In-App",
+      "post": "Food quality is authentic Assamese taste, but Friday evening wait time was 58 minutes! Digital QR ordering gave ticket instantly, but kitchen line cooks took too long to serve."
+    },
+    {
+      "round": 15,
+      "agentId": "AGT-YTH-13",
+      "author": "Ankur & Jintu",
+      "rating": 1,
+      "platform": "Google Reviews / Swiggy / In-App",
+      "post": "Food quality is authentic Assamese taste, but Friday evening wait time was 59 minutes! Digital QR ordering gave ticket instantly, but kitchen line cooks took too long to serve."
+    },
+    {
+      "round": 15,
+      "agentId": "AGT-TRD-2",
+      "author": "Kharageswar Adhikari (Senior Trader)",
+      "rating": 5,
+      "platform": "Google Reviews",
+      "post": "Excellent service today! Server took order on his tablet for us when we mentioned we didn't have QR scan app. Food was served hot and we paid cash smoothly. Best hospitality in Barpeta."
+    },
+    {
+      "round": 15,
+      "agentId": "AGT-TRD-3",
+      "author": "Ratneswar Das (Farmer Representative)",
+      "rating": 5,
+      "platform": "Google Reviews",
+      "post": "Excellent service today! Server took order on his tablet for us when we mentioned we didn't have QR scan app. Food was served hot and we paid cash smoothly. Best hospitality in Barpeta."
+    },
+    {
+      "round": 15,
+      "agentId": "AGT-TRD-3",
+      "author": "Ratneswar Das (Farmer Representative)",
+      "rating": 1,
+      "platform": "Google Reviews / Swiggy / In-App",
+      "post": "Food quality is authentic Assamese taste, but Friday evening wait time was 63 minutes! Digital QR ordering gave ticket instantly, but kitchen line cooks took too long to serve."
+    },
+    {
+      "round": 15,
+      "agentId": "AGT-TRD-4",
+      "author": "Golap Chandra Barua (Pilgrim)",
+      "rating": 5,
+      "platform": "Google Reviews",
+      "post": "Excellent service today! Server took order on his tablet for us when we mentioned we didn't have QR scan app. Food was served hot and we paid cash smoothly. Best hospitality in Barpeta."
+    },
+    {
+      "round": 15,
+      "agentId": "AGT-TRD-4",
+      "author": "Golap Chandra Barua (Pilgrim)",
+      "rating": 1,
+      "platform": "Google Reviews / Swiggy / In-App",
+      "post": "Food quality is authentic Assamese taste, but Friday evening wait time was 64 minutes! Digital QR ordering gave ticket instantly, but kitchen line cooks took too long to serve."
+    },
+    {
+      "round": 15,
+      "agentId": "AGT-TRD-5",
+      "author": "Mohan Chandra Sarma (Senior Citizen)",
+      "rating": 5,
+      "platform": "Google Reviews",
+      "post": "Excellent service today! Server took order on his tablet for us when we mentioned we didn't have QR scan app. Food was served hot and we paid cash smoothly. Best hospitality in Barpeta."
+    },
+    {
+      "round": 15,
+      "agentId": "AGT-TRD-5",
+      "author": "Mohan Chandra Sarma (Senior Citizen)",
+      "rating": 1,
+      "platform": "Google Reviews / Swiggy / In-App",
+      "post": "Food quality is authentic Assamese taste, but Friday evening wait time was 65 minutes! Digital QR ordering gave ticket instantly, but kitchen line cooks took too long to serve."
+    },
+    {
+      "round": 15,
+      "agentId": "AGT-TRD-6",
+      "author": "Birendra Kumar Roy (Local Merchant)",
+      "rating": 5,
+      "platform": "Google Reviews",
+      "post": "Excellent service today! Server took order on his tablet for us when we mentioned we didn't have QR scan app. Food was served hot and we paid cash smoothly. Best hospitality in Barpeta."
+    },
+    {
+      "round": 15,
+      "agentId": "AGT-TRD-6",
+      "author": "Birendra Kumar Roy (Local Merchant)",
+      "rating": 1,
+      "platform": "Google Reviews / Swiggy / In-App",
+      "post": "Food quality is authentic Assamese taste, but Friday evening wait time was 66 minutes! Digital QR ordering gave ticket instantly, but kitchen line cooks took too long to serve."
+    },
+    {
+      "round": 15,
+      "agentId": "AGT-TRD-7",
+      "author": "Lakheswar Pathak (Satra Devotee)",
+      "rating": 5,
+      "platform": "Google Reviews",
+      "post": "Excellent service today! Server took order on his tablet for us when we mentioned we didn't have QR scan app. Food was served hot and we paid cash smoothly. Best hospitality in Barpeta."
+    },
+    {
+      "round": 15,
+      "agentId": "AGT-TRD-8",
+      "author": "Gonesh Chandra Baishya (Senior Guest)",
+      "rating": 5,
+      "platform": "Google Reviews",
+      "post": "Excellent service today! Server took order on his tablet for us when we mentioned we didn't have QR scan app. Food was served hot and we paid cash smoothly. Best hospitality in Barpeta."
+    },
+    {
+      "round": 15,
+      "agentId": "AGT-TRD-8",
+      "author": "Gonesh Chandra Baishya (Senior Guest)",
+      "rating": 1,
+      "platform": "Google Reviews / Swiggy / In-App",
+      "post": "Food quality is authentic Assamese taste, but Friday evening wait time was 68 minutes! Digital QR ordering gave ticket instantly, but kitchen line cooks took too long to serve."
+    },
+    {
+      "round": 15,
+      "agentId": "COMP-1",
+      "author": "Hotel Satra View (Legacy Lodge Owner)",
+      "rating": 2,
+      "platform": "Local WhatsApp / Barpeta Trade Circle",
+      "post": "Notice how Jonak Hotel is making everybody use smartphone QRs? If you don't have internet or UPI, they don't even attend you nicely. Our lodge offers personal service, cash bill, and hot food right on the table without phone drama."
+    },
+    {
+      "round": 15,
+      "agentId": "COMP-2",
+      "author": "Barpeta Grand Dhaba (Traditional Dhaba Operator)",
+      "rating": 2,
+      "platform": "Local WhatsApp / Barpeta Trade Circle",
+      "post": "Notice how Jonak Hotel is making everybody use smartphone QRs? If you don't have internet or UPI, they don't even attend you nicely. Our lodge offers personal service, cash bill, and hot food right on the table without phone drama."
+    }
+  ],
+  "agentSegmentsSummary": {
+    "businessTravelers": {
+      "count": 12,
+      "avgRating": 3.76,
+      "packageAdoptionRate": "68%",
+      "dinnerPrebookAdoption": "65%"
+    },
+    "familiesAndTourists": {
+      "count": 16,
+      "avgRating": 2.96,
+      "packageAdoptionRate": "54%",
+      "dinnerPrebookAdoption": "55%"
+    },
+    "localYouth": {
+      "count": 16,
+      "avgRating": 1,
+      "qrComplianceRate": "98%",
+      "waitToleranceMins": 25
+    },
+    "traditionalWalkins": {
+      "count": 8,
+      "avgRating": 1,
+      "dropoffCount": 21
+    }
+  }
+}

@@ -37,6 +37,10 @@ Thumbs.db
 # Backup Files
 *.backup.json
 
+# Uploaded KYC & Guest Documents
+public/uploads/kyc/*
+!public/uploads/kyc/.gitkeep
+
 # PocketBase Local Binary & Temp Data
 pocketbase/*.exe
 pocketbase/*.zip

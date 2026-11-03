@@ -21,16 +21,31 @@ export const KitchenDesk = () => {
     updateOrderStatus, 
     menu, 
     toggleDishStock, 
-    staffSession 
+    staffSession,
+    rawInventory,
+    useStock,
+    showToast
   } = useHotel();
 
-  const [activeTab, setActiveTab] = useState('KDS'); // 'KDS' | 'STOCK_SWITCHER'
+  const [activeTab, setActiveTab] = useState('KDS'); // 'KDS' | 'STOCK_SWITCHER' | 'RAW_RATION'
+  const [kdsLane, setKdsLane] = useState('ALL'); // 'ALL' | 'LANE1_ROOMS' | 'LANE2_DINEIN_DELIVERY'
   const [menuSearch, setMenuSearch] = useState('');
 
+  // Dual-Lane Filtering
+  const laneOrders = orders.filter(o => {
+    const isRoom = o.diningType === 'room_service' || !!o.roomNumber;
+    if (kdsLane === 'LANE1_ROOMS') return isRoom;
+    if (kdsLane === 'LANE2_DINEIN_DELIVERY') return !isRoom;
+    return true;
+  });
+
   // Orders columns
-  const newOrders = orders.filter(o => o.status === 'New');
-  const cookingOrders = orders.filter(o => o.status === 'Cooking' || o.status === 'Confirmed');
-  const readyOrders = orders.filter(o => o.status === 'Ready' || o.status === 'Ready for Pickup');
+  const newOrders = laneOrders.filter(o => o.status === 'New');
+  const cookingOrders = laneOrders.filter(o => o.status === 'Cooking' || o.status === 'Confirmed');
+  const readyOrders = laneOrders.filter(o => o.status === 'Ready' || o.status === 'Ready for Pickup');
+
+  // Low stock inventory items
+  const lowStockItems = (rawInventory || []).filter(item => item.currentStock <= item.minThreshold);
 
   // Filtered menu for 1-tap stockout switcher
   const filteredMenu = menu.filter(dish => {
@@ -110,8 +125,114 @@ export const KitchenDesk = () => {
             <UtensilsCrossed size={15} />
             <span>1-Tap Dish Stock-Out</span>
           </button>
+
+          <button
+            onClick={() => setActiveTab('RAW_RATION')}
+            style={{
+              padding: '0.5rem 1rem',
+              borderRadius: '6px',
+              border: 'none',
+              background: activeTab === 'RAW_RATION' ? '#FF9900' : 'transparent',
+              color: activeTab === 'RAW_RATION' ? '#070B14' : 'var(--text-secondary)',
+              fontWeight: 700,
+              fontSize: '0.82rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              position: 'relative'
+            }}
+          >
+            <span>🥩 Raw Ration & LPG</span>
+            {lowStockItems.length > 0 && (
+              <span style={{
+                background: '#EF4444',
+                color: '#FFFFFF',
+                borderRadius: '50%',
+                width: '18px',
+                height: '18px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '0.7rem',
+                fontWeight: 800
+              }}>
+                {lowStockItems.length}
+              </span>
+            )}
+          </button>
         </div>
       </div>
+
+      {/* DUAL-LANE DISPATCH SWITCHER (LANE 1: ROOMS 101-304 vs LANE 2: DINE-IN/DELIVERY) */}
+      {activeTab === 'KDS' && (
+        <div style={{
+          display: 'flex',
+          gap: '0.75rem',
+          marginBottom: '1.25rem',
+          flexWrap: 'wrap'
+        }}>
+          <button
+            onClick={() => setKdsLane('ALL')}
+            style={{
+              padding: '0.5rem 1rem',
+              borderRadius: '20px',
+              border: kdsLane === 'ALL' ? '2px solid var(--gold-primary)' : '1px solid rgba(255,255,255,0.15)',
+              background: kdsLane === 'ALL' ? 'rgba(212, 175, 55, 0.15)' : 'rgba(0,0,0,0.3)',
+              color: kdsLane === 'ALL' ? '#FFFFFF' : 'var(--text-secondary)',
+              fontWeight: 700,
+              fontSize: '0.82rem',
+              cursor: 'pointer'
+            }}
+          >
+            All Dispatch Lanes
+          </button>
+
+          <button
+            onClick={() => setKdsLane('LANE1_ROOMS')}
+            style={{
+              padding: '0.5rem 1rem',
+              borderRadius: '20px',
+              border: kdsLane === 'LANE1_ROOMS' ? '2px solid #D4AF37' : '1px solid rgba(255,255,255,0.15)',
+              background: kdsLane === 'LANE1_ROOMS' ? 'rgba(212, 175, 55, 0.25)' : 'rgba(0,0,0,0.3)',
+              color: kdsLane === 'LANE1_ROOMS' ? '#D4AF37' : 'var(--text-secondary)',
+              fontWeight: 800,
+              fontSize: '0.82rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem'
+            }}
+          >
+            <span>🏨 Lane 1: VIP In-Room Dining (Rooms 101–304)</span>
+            <span style={{ background: '#D4AF37', color: '#070B14', padding: '0.1rem 0.4rem', borderRadius: '10px', fontSize: '0.72rem' }}>
+              {orders.filter(o => o.diningType === 'room_service' || o.roomNumber).length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setKdsLane('LANE2_DINEIN_DELIVERY')}
+            style={{
+              padding: '0.5rem 1rem',
+              borderRadius: '20px',
+              border: kdsLane === 'LANE2_DINEIN_DELIVERY' ? '2px solid #3B82F6' : '1px solid rgba(255,255,255,0.15)',
+              background: kdsLane === 'LANE2_DINEIN_DELIVERY' ? 'rgba(59, 130, 246, 0.25)' : 'rgba(0,0,0,0.3)',
+              color: kdsLane === 'LANE2_DINEIN_DELIVERY' ? '#60A5FA' : 'var(--text-secondary)',
+              fontWeight: 800,
+              fontSize: '0.82rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem'
+            }}
+          >
+            <span>🍽️ Lane 2: Restaurant Dine-In & 5 KM Delivery</span>
+            <span style={{ background: '#3B82F6', color: '#FFFFFF', padding: '0.1rem 0.4rem', borderRadius: '10px', fontSize: '0.72rem' }}>
+              {orders.filter(o => o.diningType !== 'room_service' && !o.roomNumber).length}
+            </span>
+          </button>
+        </div>
+      )}
 
       {/* ---------------------------------------------------------------------- */}
       {/* VIEW 1: LIVE KDS BOARD (3 COLUMNS)                                    */}
@@ -513,6 +634,103 @@ export const KitchenDesk = () => {
                 </button>
               </div>
             ))}
+          </div>
+        </div>
+      ) : null}
+
+      {/* ---------------------------------------------------------------------- */}
+      {/* VIEW 3: RAW RATION & COMMERCIAL LPG CYLINDERS INVENTORY                */}
+      {/* ---------------------------------------------------------------------- */}
+      {activeTab === 'RAW_RATION' && (
+        <div>
+          {/* Low Stock Warning Banner */}
+          {lowStockItems.length > 0 && (
+            <div style={{
+              background: 'rgba(239, 68, 68, 0.15)',
+              border: '1.5px solid #EF4444',
+              borderRadius: '8px',
+              padding: '1rem 1.25rem',
+              marginBottom: '1.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem'
+            }}>
+              <AlertCircle size={22} color="#EF4444" />
+              <div>
+                <div style={{ fontWeight: 800, color: '#EF4444', fontSize: '0.95rem' }}>
+                  ⚠️ Critical Kitchen Low Stock Alert ({lowStockItems.length} Items Below Threshold)
+                </div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                  {lowStockItems.map(i => `${i.name} (${i.currentStock} ${i.unit} left)`).join(' • ')}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Raw Inventory Cards */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: '1.25rem'
+          }}>
+            {(rawInventory || []).map((item) => {
+              const isLow = item.currentStock <= item.minThreshold;
+              return (
+                <div
+                  key={item.id}
+                  className="glass-card"
+                  style={{
+                    padding: '1.25rem',
+                    borderLeft: `4px solid ${isLow ? '#EF4444' : '#10B981'}`
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                    <div>
+                      <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#FFFFFF', margin: 0 }}>
+                        {item.name}
+                      </h4>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                        {item.category} • Min: {item.minThreshold} {item.unit}
+                      </span>
+                    </div>
+                    <span style={{
+                      padding: '0.2rem 0.5rem',
+                      borderRadius: '4px',
+                      background: isLow ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)',
+                      color: isLow ? '#EF4444' : '#10B981',
+                      fontSize: '0.72rem',
+                      fontWeight: 800
+                    }}>
+                      {isLow ? 'CRITICAL LOW' : 'ADEQUATE'}
+                    </span>
+                  </div>
+
+                  <div style={{
+                    fontSize: '1.8rem',
+                    fontWeight: 900,
+                    color: isLow ? '#EF4444' : 'var(--gold-primary)',
+                    fontFamily: 'monospace',
+                    marginBottom: '0.75rem'
+                  }}>
+                    {item.currentStock} <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>{item.unit}</span>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button
+                      onClick={() => {
+                        const qty = item.unit === 'Cylinders' ? 1 : 2;
+                        if (useStock) useStock(item.id, qty, 'Kitchen Daily Service');
+                        showToast(`Logged usage: -${qty} ${item.unit} for ${item.name}`, 'info');
+                      }}
+                      className="btn btn-secondary btn-sm"
+                      style={{ flex: 1, fontSize: '0.78rem' }}
+                    >
+                      Use -{item.unit === 'Cylinders' ? '1' : '2'} {item.unit}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

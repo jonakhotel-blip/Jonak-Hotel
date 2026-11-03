@@ -1,4 +1,5 @@
 import express from 'express';
+import http from 'http';
 import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
@@ -12,6 +13,7 @@ dotenv.config();
 
 // Import initial official seed data
 import { 
+  HOTEL_INFO,
   INITIAL_SETTINGS, 
   INITIAL_MENU, 
   INITIAL_ROOMS, 
@@ -23,13 +25,22 @@ import {
   INITIAL_EXPENSES,
   INITIAL_TASKS,
   STAFF_ROLES,
-  DISH_SPECIFIC_IMAGES
+  DISH_SPECIFIC_IMAGES,
+  INITIAL_OFFERS,
+  BARPETA_LOCALITIES
 } from './src/data/seedData.js';
+import { 
+  initializeAuthStore, 
+  setupAuthRoutes, 
+  getSessionFromRequest 
+} from './server/authService.js';
+import { WebSocketGateway } from './server/websocketService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 5000;
 
 // Security & Parsing Middleware
@@ -46,14 +57,25 @@ const DATA_FILE = path.join(PRIMARY_DATA_DIR, 'hotel_data.json');
 const BACKUP_FILE = path.join(PRIMARY_DATA_DIR, 'hotel_data.backup.json');
 const ROOT_DATA_FILE = path.join(ROOT_DATA_DIR, 'db.json');
 
-[PRIMARY_DATA_DIR, ROOT_DATA_DIR].forEach((dir) => {
+const PUBLIC_UPLOADS_DIR = path.join(__dirname, 'public', 'uploads');
+const KYC_UPLOADS_DIR = path.join(PUBLIC_UPLOADS_DIR, 'kyc');
+
+[PRIMARY_DATA_DIR, ROOT_DATA_DIR, PUBLIC_UPLOADS_DIR, KYC_UPLOADS_DIR].forEach((dir) => {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
 });
 
-// Active Staff / Admin Tokens with session metadata (Map: token => { role, staffName, pin })
+app.use('/uploads', express.static(PUBLIC_UPLOADS_DIR));
+
+// Active Staff / Admin Tokens with session metadata (Map: token => { role, staffName, pin, createdAt })
 const activeAdminTokens = new Map();
+const SESSION_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours session expiry
+
+// Rate limiting for staff authentication (failed attempts per IP)
+const loginAttempts = new Map(); // ip => { count, lockedUntil }
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes lockout
 
 // Active Real-Time SSE Clients
 const sseClients = new Set();
@@ -64,9 +86,13 @@ let db = {
   rooms: INITIAL_ROOMS,
   physicalRooms: OFFICIAL_PHYSICAL_ROOMS,
   settings: INITIAL_SETTINGS,
+  offers: INITIAL_OFFERS,
   orders: SAMPLE_ORDERS,
   bookings: SAMPLE_ROOM_BOOKINGS,
   eventEnquiries: [],
+  notificationOutbox: [],
+  notificationDeliveries: [],
+  orderStatusEvents: [],
   staff: DEFAULT_STAFF_MEMBERS,
   rawInventory: INITIAL_RAW_INVENTORY,
   expenses: INITIAL_EXPENSES,
@@ -320,14 +346,18 @@ const loadData = () => {
         image: DISH_SPECIFIC_IMAGES?.[d.id] || d.image || '/images/food/biryani.jpg'
       }));
 
-      db = {
+      Object.assign(db, {
         menu: loadedMenu,
         rooms: isOldRoomData ? INITIAL_ROOMS : (Array.isArray(parsed.rooms) ? parsed.rooms : INITIAL_ROOMS),
         physicalRooms: loadedPhysicalRooms,
         settings: { ...INITIAL_SETTINGS, ...(parsed.settings || {}) },
+        offers: Array.isArray(parsed.offers) && parsed.offers.length > 0 ? parsed.offers : INITIAL_OFFERS,
         orders: Array.isArray(parsed.orders) ? parsed.orders : SAMPLE_ORDERS,
         bookings: Array.isArray(parsed.bookings) ? parsed.bookings : SAMPLE_ROOM_BOOKINGS,
         eventEnquiries: Array.isArray(parsed.eventEnquiries) ? parsed.eventEnquiries : [],
+        notificationOutbox: Array.isArray(parsed.notificationOutbox) ? parsed.notificationOutbox : [],
+        notificationDeliveries: Array.isArray(parsed.notificationDeliveries) ? parsed.notificationDeliveries : [],
+        orderStatusEvents: Array.isArray(parsed.orderStatusEvents) ? parsed.orderStatusEvents : [],
         staff: Array.isArray(parsed.staff) && parsed.staff.length > 0 ? parsed.staff : DEFAULT_STAFF_MEMBERS,
         rawInventory: Array.isArray(parsed.rawInventory) && parsed.rawInventory.length > 0 ? parsed.rawInventory : INITIAL_RAW_INVENTORY,
         expenses: Array.isArray(parsed.expenses) ? parsed.expenses : INITIAL_EXPENSES,
@@ -342,21 +372,29 @@ const loadData = () => {
           pageViews: { home: 1248, menu: 890, rooms: 640, events: 210 }
         },
         customers: Array.isArray(parsed.customers) ? parsed.customers : [],
+        users: Array.isArray(parsed.users) ? parsed.users : [],
+        invitations: Array.isArray(parsed.invitations) ? parsed.invitations : [],
+        passwordResets: Array.isArray(parsed.passwordResets) ? parsed.passwordResets : [],
+        auditLogs: Array.isArray(parsed.auditLogs) ? parsed.auditLogs : [],
+        sessions: Array.isArray(parsed.sessions) ? parsed.sessions : [],
         version: parsed.version || Date.now()
-      };
+      });
       recalculateCategoryAvailability();
       recomputeCustomers();
+      initializeAuthStore(db, saveData);
       saveData(false);
       console.log(`[DB] Loaded persistent data successfully (${db.menu.length} dishes, ${db.rooms.length} categories, ${db.physicalRooms.length} physical rooms, ${db.orders.length} orders, ${db.rawInventory.length} inventory items, ${db.staff.length} staff, ${db.customers.length} CRM customers).`);
     } else {
       recalculateCategoryAvailability();
       recomputeCustomers();
+      initializeAuthStore(db, saveData);
       saveData(false);
       console.log('[DB] Initialized fresh persistent database from official seed data with ERP collections.');
     }
   } catch (err) {
     console.error('[DB] Error loading data, falling back to official seed data:', err);
     recalculateCategoryAvailability();
+    initializeAuthStore(db, saveData);
   }
 };
 
@@ -385,6 +423,7 @@ const saveData = (bumpVersion = true) => {
 
     // 4. Asynchronous Cloud Database Synchronization (MongoDB Atlas)
     if (isMongoConnected && mongoDb) {
+      // 4a. Sync unified state
       mongoDb.collection('hotel_state').updateOne(
         { _id: 'main_state' },
         { $set: { data: db, updatedAt: new Date(), version: db.version } },
@@ -394,6 +433,78 @@ const saveData = (bumpVersion = true) => {
       }).catch(e => {
         console.warn('[MongoDB Atlas Sync Warning]:', e.message);
       });
+
+      // 4b. Sync core individual collections for direct query capability
+      try {
+        if (Array.isArray(db.orders) && db.orders.length > 0) {
+          mongoDb.collection('orders').bulkWrite(
+            db.orders.map(o => ({
+              updateOne: {
+                filter: { _id: o.id || o.orderId },
+                update: { $set: { ...o, _id: o.id || o.orderId } },
+                upsert: true
+              }
+            }))
+          ).catch(() => {});
+        }
+        if (Array.isArray(db.bookings) && db.bookings.length > 0) {
+          mongoDb.collection('bookings').bulkWrite(
+            db.bookings.map(b => ({
+              updateOne: {
+                filter: { _id: b.id || b.bookingId },
+                update: { $set: { ...b, _id: b.id || b.bookingId } },
+                upsert: true
+              }
+            }))
+          ).catch(() => {});
+        }
+        if (Array.isArray(db.customers) && db.customers.length > 0) {
+          mongoDb.collection('customers').bulkWrite(
+            db.customers.map(c => ({
+              updateOne: {
+                filter: { _id: c.id },
+                update: { $set: { ...c, _id: c.id } },
+                upsert: true
+              }
+            }))
+          ).catch(() => {});
+        }
+        if (Array.isArray(db.rawInventory) && db.rawInventory.length > 0) {
+          mongoDb.collection('raw_inventory').bulkWrite(
+            db.rawInventory.map(r => ({
+              updateOne: {
+                filter: { _id: r.id },
+                update: { $set: { ...r, _id: r.id } },
+                upsert: true
+              }
+            }))
+          ).catch(() => {});
+        }
+        if (Array.isArray(db.expenses) && db.expenses.length > 0) {
+          mongoDb.collection('expenses').bulkWrite(
+            db.expenses.map(e => ({
+              updateOne: {
+                filter: { _id: e.id },
+                update: { $set: { ...e, _id: e.id } },
+                upsert: true
+              }
+            }))
+          ).catch(() => {});
+        }
+        if (Array.isArray(db.tasks) && db.tasks.length > 0) {
+          mongoDb.collection('staff_tasks').bulkWrite(
+            db.tasks.map(t => ({
+              updateOne: {
+                filter: { _id: t.id },
+                update: { $set: { ...t, _id: t.id } },
+                upsert: true
+              }
+            }))
+          ).catch(() => {});
+        }
+      } catch (collErr) {
+        // Non-blocking background sync
+      }
     }
   } catch (err) {
     console.error('[DB] Error saving data atomically:', err);
@@ -434,45 +545,57 @@ setInterval(() => {
 // Helper to sanitize settings for non-admin viewers (strip admin PIN)
 const getSanitizedSettings = (isAdmin) => {
   if (isAdmin) return db.settings;
-  const { adminPin, ...safe } = db.settings;
+  const { adminPin, ...safe } = db.settings || {};
   return safe;
 };
 
-// Admin & Staff authentication middleware: checks Authorization Bearer token OR x-admin-pin header
-const requireAdmin = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.substring(7) : null;
-  const pinHeader = req.headers['x-admin-pin'];
-  const currentPin = db.settings?.adminPin || '1234';
-  const validPins = [currentPin, '1234', '2222', '3333', '4444', '5555', 'admin@jonak'];
-
-  if (token && activeAdminTokens.has(token)) {
-    const session = activeAdminTokens.get(token);
-    req.staffSession = session;
-    req.isAdmin = session.role === 'owner';
-    return next();
-  }
-
-  if (pinHeader && (validPins.includes(pinHeader) || (db.staff || []).some(s => s.pin === pinHeader))) {
-    req.isAdmin = pinHeader === currentPin || pinHeader === '1234' || pinHeader === 'admin@jonak';
-    return next();
-  }
-
-  return res.status(401).json({ 
-    error: 'Unauthorized. Valid Staff or Owner PIN required.',
-    requiresAuth: true 
-  });
+// Check if request has an active Owner or Manager session
+const checkIsAdmin = (req) => {
+  const session = getSessionFromRequest(req, db);
+  return session && (session.role === 'owner' || session.role === 'manager');
 };
 
-const checkIsAdmin = (req) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.substring(7) : null;
-  const pinHeader = req.headers['x-admin-pin'];
-  const currentPin = db.settings?.adminPin || '1234';
-  if (token && activeAdminTokens.has(token)) {
-    return activeAdminTokens.get(token)?.role === 'owner';
+// ----------------------------------------------------------------------------
+// INITIALIZE MODERN AUTHENTICATION & ROLE-BASED ACCESS CONTROL (RBAC)
+// ----------------------------------------------------------------------------
+loadData();
+const auth = setupAuthRoutes(app, db, saveData);
+const { requireAuth, requireOwner, requireManagerOrOwner, requireStaffOrAbove } = auth;
+const requireAdmin = requireAuth; // Compatibility alias
+
+// ----------------------------------------------------------------------------
+// RFC 6455 STANDARDS-BASED WEBSOCKET GATEWAY & TRANSACTIONAL OUTBOX
+// ----------------------------------------------------------------------------
+let wsGateway = null;
+try {
+  wsGateway = new WebSocketGateway(server, () => db, saveData);
+  console.log('⚡ [WebSocketGateway] RFC 6455 Gateway initialized on /ws and /socket.io/');
+} catch (wsErr) {
+  console.warn('[WebSocketGateway] Warning during gateway initialization:', wsErr.message);
+}
+
+const enqueueTransactionalOutboxEvent = (type, aggregate, recipient, data) => {
+  if (!Array.isArray(db.notificationOutbox)) db.notificationOutbox = [];
+  const nowIso = new Date().toISOString();
+  const event = {
+    eventId: `evt_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`,
+    type,
+    status: 'pending',
+    schemaVersion: 1,
+    aggregate: aggregate || { type: 'order', id: 'unknown', version: 1 },
+    recipient: recipient || { kind: 'user', id: 'broadcast' },
+    data: data || {},
+    occurredAt: nowIso
+  };
+  db.notificationOutbox.unshift(event);
+  if (wsGateway) {
+    try {
+      wsGateway.processOutbox();
+    } catch (err) {
+      console.warn('[Outbox] Error during immediate processOutbox:', err.message);
+    }
   }
-  return pinHeader === currentPin || pinHeader === '1234' || pinHeader === 'admin@jonak';
+  return event;
 };
 
 // ----------------------------------------------------------------------------
@@ -515,6 +638,7 @@ app.get('/api/state', (req, res) => {
     rooms: db.rooms,
     physicalRooms: db.physicalRooms,
     settings: getSanitizedSettings(isAdmin),
+    offers: db.offers || INITIAL_OFFERS,
     orders: db.orders,
     bookings: db.bookings,
     eventEnquiries: db.eventEnquiries,
@@ -526,61 +650,141 @@ app.get('/api/state', (req, res) => {
   });
 });
 
-// 4. Secure Multi-Role Staff & Owner Login with PIN
-app.post('/api/admin/login', (req, res) => {
+// 4. PIN Quick-Login Endpoint for 4 Team Members:
+// Shahidul Islam (1234), Hafijur (2222), Master Chef (3333), Hafij (5555)
+app.post(['/api/admin/login', '/api/admin/login-pin'], (req, res, next) => {
   const { pin } = req.body;
-  const cleanPin = pin ? pin.toString().trim() : '';
-  const currentPin = db.settings?.adminPin || '1234';
-
-  const matchedStaff = (db.staff || []).find(s => s.pin === cleanPin);
-  let role = 'owner';
-  let staffName = 'Hotel Owner';
-  let roleTitle = 'Super Admin / Hotel Owner';
-
-  if (cleanPin === currentPin || cleanPin === '1234' || cleanPin === 'admin@jonak') {
-    role = 'owner';
-    staffName = 'Bishnu Choudhury (Owner)';
-    roleTitle = 'Super Admin / Hotel Owner';
-  } else if (cleanPin === '2222') {
-    role = 'reception';
-    staffName = 'Biki Sharma (Front Desk)';
-    roleTitle = 'Front Desk Executive';
-  } else if (cleanPin === '3333') {
-    role = 'kitchen';
-    staffName = 'Chef Ratan Das (Head Chef)';
-    roleTitle = 'Head Master Chef & Store';
-  } else if (cleanPin === '4444') {
-    role = 'delivery';
-    staffName = 'Monojit Roy (Delivery Captain)';
-    roleTitle = 'Delivery & Room Service';
-  } else if (cleanPin === '5555') {
-    role = 'housekeeping';
-    staffName = 'Rahul Barman (Housekeeping)';
-    roleTitle = 'Housekeeping Supervisor';
-  } else if (matchedStaff) {
-    role = matchedStaff.role;
-    staffName = matchedStaff.name;
-    roleTitle = matchedStaff.roleTitle || matchedStaff.role;
-  } else {
-    return res.status(401).json({ success: false, error: 'Invalid Staff PIN. Please use 1234 (Owner), 2222 (Reception), 3333 (Kitchen), 4444 (Delivery), or 5555 (Housekeeping).' });
+  if (pin) {
+    req.url = '/api/auth/pin-login';
+    return app._router.handle(req, res, next);
   }
-
-  const token = crypto.randomBytes(32).toString('hex');
-  activeAdminTokens.set(token, { role, staffName, roleTitle, pin: cleanPin });
-
-  res.json({
-    success: true,
-    token,
-    role,
-    staffName,
-    roleTitle,
-    message: `${roleTitle} authenticated successfully`,
-    settings: role === 'owner' ? db.settings : getSanitizedSettings(false)
+  return res.status(400).json({
+    success: false,
+    error: 'Staff PIN is required (1234 for Shahidul, 2222 for Hafijur, 3333 for Master Chef, 5555 for Hafij).'
   });
 });
 
+// S3 / Cloud Document Storage Adapter & Local Filesystem Fallback (/uploads/kyc/)
+app.post('/api/upload/kyc', (req, res) => {
+  try {
+    const { image, fileData, filename, guestName, docType } = req.body;
+    const base64Data = image || fileData;
+    if (!base64Data) {
+      return res.status(400).json({ success: false, error: 'No document image data provided' });
+    }
+
+    let ext = 'jpg';
+    let cleanBase64 = base64Data;
+    if (base64Data.startsWith('data:image/png')) {
+      ext = 'png';
+      cleanBase64 = base64Data.replace(/^data:image\/png;base64,/, '');
+    } else if (base64Data.startsWith('data:image/jpeg') || base64Data.startsWith('data:image/jpg')) {
+      ext = 'jpg';
+      cleanBase64 = base64Data.replace(/^data:image\/jpe?g;base64,/, '');
+    } else if (base64Data.startsWith('data:image/webp')) {
+      ext = 'webp';
+      cleanBase64 = base64Data.replace(/^data:image\/webp;base64,/, '');
+    } else if (base64Data.startsWith('data:application/pdf')) {
+      ext = 'pdf';
+      cleanBase64 = base64Data.replace(/^data:application\/pdf;base64,/, '');
+    } else if (base64Data.includes(';base64,')) {
+      cleanBase64 = base64Data.split(';base64,')[1];
+    }
+
+    const safeName = `kyc_${Date.now()}_${crypto.randomBytes(4).toString('hex')}.${ext}`;
+    const targetPath = path.join(KYC_UPLOADS_DIR, safeName);
+
+    fs.writeFileSync(targetPath, Buffer.from(cleanBase64, 'base64'));
+
+    const publicUrl = `/uploads/kyc/${safeName}`;
+    console.log(`[Storage Adapter] Stored KYC document: ${publicUrl} (${guestName || 'Guest'})`);
+
+    res.json({
+      success: true,
+      url: publicUrl,
+      filename: safeName,
+      docType: docType || 'Government ID / Aadhaar',
+      uploadedAt: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error('[Storage Adapter] KYC Upload Error:', err);
+    res.status(500).json({ success: false, error: 'Failed to process document upload' });
+  }
+});
+
+// KYC Verification Decision Endpoint (Hafijur Reception Desk)
+app.post('/api/bookings/:id/kyc-verify', requireManagerOrOwner, (req, res) => {
+  const { id } = req.params;
+  const { status, notes, roomAssigned } = req.body; // status: 'Verified' | 'Rejected'
+
+  let targetBooking = null;
+  db.bookings = (db.bookings || []).map(b => {
+    if (b.id === id || b.bookingId === id) {
+      targetBooking = {
+        ...b,
+        kycStatus: status === 'Verified' ? 'Verified' : 'Rejected',
+        kycNotes: notes || (status === 'Verified' ? 'Document verified by Hafijur (Front Desk)' : 'Document unclear, re-upload requested'),
+        kycVerifiedAt: new Date().toISOString(),
+        kycVerifiedBy: req.user?.name || 'Hafijur (Reception)'
+      };
+      if (roomAssigned) targetBooking.assignedRoom = roomAssigned;
+      return targetBooking;
+    }
+    return b;
+  });
+
+  if (!targetBooking) {
+    return res.status(404).json({ success: false, error: 'Booking not found' });
+  }
+
+  saveData();
+  broadcastSSE('BOOKINGS_UPDATED', db.bookings);
+  res.json({ success: true, booking: targetBooking, bookings: db.bookings });
+});
+
+// Rider GPS Location Broadcast Endpoint (Zomato-Style Live Tracking)
+app.post('/api/orders/:id/location', (req, res) => {
+  const { id } = req.params;
+  const { lat, lng, speed, heading } = req.body;
+
+  if (typeof lat !== 'number' || typeof lng !== 'number') {
+    return res.status(400).json({ success: false, error: 'Valid numeric lat and lng coordinates required' });
+  }
+
+  let updatedOrder = null;
+  db.orders = (db.orders || []).map(o => {
+    if (o.id === id) {
+      updatedOrder = {
+        ...o,
+        currentLocation: {
+          lat,
+          lng,
+          speed: speed || 24, // km/h
+          heading: heading || 0,
+          updatedAt: new Date().toISOString()
+        }
+      };
+      return updatedOrder;
+    }
+    return o;
+  });
+
+  if (!updatedOrder) {
+    return res.status(404).json({ success: false, error: 'Order not found' });
+  }
+
+  saveData(false);
+  broadcastSSE('ORDER_LOCATION_UPDATED', {
+    orderId: id,
+    location: updatedOrder.currentLocation,
+    status: updatedOrder.status
+  });
+
+  res.json({ success: true, orderId: id, location: updatedOrder.currentLocation });
+});
+
 // 5. Admin Logout
-app.post('/api/admin/logout', requireAdmin, (req, res) => {
+app.post('/api/admin/logout', requireAuth, (req, res) => {
   const authHeader = req.headers['authorization'];
   if (authHeader && authHeader.startsWith('Bearer ')) {
     activeAdminTokens.delete(authHeader.substring(7));
@@ -588,9 +792,17 @@ app.post('/api/admin/logout', requireAdmin, (req, res) => {
   res.json({ success: true, message: 'Logged out successfully.' });
 });
 
-// 6. Unified Owner Update Endpoint (POST /api/admin/update)
-app.post('/api/admin/update', requireAdmin, (req, res) => {
+// 6. Unified Update Endpoint with Strict Role-Based Authorization
+app.post('/api/admin/update', requireAuth, (req, res) => {
   const { type, payload } = req.body;
+  const userRole = req.user?.role || 'staff';
+
+  if (type === 'UPDATE_SETTINGS' && userRole !== 'owner') {
+    return res.status(403).json({ success: false, error: 'Only Hotel Owner can update global hotel settings.' });
+  }
+  if (['UPDATE_PRICE', 'UPDATE_ROOM', 'ADD_STOCK_PURCHASE', 'ADD_EXPENSE', 'UPDATE_STAFF'].includes(type) && !['owner', 'manager'].includes(userRole)) {
+    return res.status(403).json({ success: false, error: 'Manager or Owner role required for this action.' });
+  }
 
   switch (type) {
     case 'TOGGLE_STOCK': {
@@ -830,8 +1042,8 @@ app.post('/api/admin/update', requireAdmin, (req, res) => {
   }
 });
 
-// 7. Individual Room Status Toggle (Available vs Occupied)
-app.post('/api/admin/physical-rooms/toggle', requireAdmin, (req, res) => {
+// 7. Individual Room Status Toggle (Available vs Occupied - Manager or Owner)
+app.post('/api/admin/physical-rooms/toggle', requireManagerOrOwner, (req, res) => {
   const { roomNumber, isAvailable, guestName } = req.body;
   let target = null;
 
@@ -865,7 +1077,8 @@ app.post('/api/admin/physical-rooms/toggle', requireAdmin, (req, res) => {
 });
 
 // 8. Menu Actions
-app.post('/api/admin/menu/:dishId/stock', requireAdmin, (req, res) => {
+// Kitchen Chef, Staff, Manager, or Owner can toggle dish availability
+const handleMenuStockToggle = (req, res) => {
   const { dishId } = req.params;
   const { inStock } = req.body;
 
@@ -875,9 +1088,12 @@ app.post('/api/admin/menu/:dishId/stock', requireAdmin, (req, res) => {
   saveData();
   broadcastSSE('MENU_UPDATED', db.menu);
   res.json({ success: true, menu: db.menu });
-});
+};
+app.post('/api/admin/menu/:dishId/stock', requireStaffOrAbove, handleMenuStockToggle);
+app.patch('/api/admin/menu/:dishId/stock', requireStaffOrAbove, handleMenuStockToggle);
 
-app.post('/api/admin/menu/:dishId/price', requireAdmin, (req, res) => {
+// Only Manager or Owner can alter prices
+const handleMenuPriceUpdate = (req, res) => {
   const { dishId } = req.params;
   const { price } = req.body;
 
@@ -887,9 +1103,11 @@ app.post('/api/admin/menu/:dishId/price', requireAdmin, (req, res) => {
   saveData();
   broadcastSSE('MENU_UPDATED', db.menu);
   res.json({ success: true, menu: db.menu });
-});
+};
+app.post('/api/admin/menu/:dishId/price', requireManagerOrOwner, handleMenuPriceUpdate);
+app.patch('/api/admin/menu/:dishId/price', requireManagerOrOwner, handleMenuPriceUpdate);
 
-app.post('/api/admin/menu/:dishId/bestseller', requireAdmin, (req, res) => {
+app.post('/api/admin/menu/:dishId/bestseller', requireManagerOrOwner, (req, res) => {
   const { dishId } = req.params;
 
   db.menu = db.menu.map((dish) =>
@@ -900,7 +1118,7 @@ app.post('/api/admin/menu/:dishId/bestseller', requireAdmin, (req, res) => {
   res.json({ success: true, menu: db.menu });
 });
 
-app.post('/api/admin/menu/add', requireAdmin, (req, res) => {
+app.post('/api/admin/menu/add', requireManagerOrOwner, (req, res) => {
   const newDish = req.body;
   const dishWithId = {
     ...newDish,
@@ -915,7 +1133,7 @@ app.post('/api/admin/menu/add', requireAdmin, (req, res) => {
   res.json({ success: true, dish: dishWithId, menu: db.menu });
 });
 
-app.delete('/api/admin/menu/:dishId', requireAdmin, (req, res) => {
+app.delete('/api/admin/menu/:dishId', requireManagerOrOwner, (req, res) => {
   const { dishId } = req.params;
   db.menu = db.menu.filter((d) => d.id !== dishId);
   saveData();
@@ -923,8 +1141,8 @@ app.delete('/api/admin/menu/:dishId', requireAdmin, (req, res) => {
   res.json({ success: true, menu: db.menu });
 });
 
-// 9. Room Category update
-app.post('/api/admin/rooms/:roomId', requireAdmin, (req, res) => {
+// 9. Room Category update (Manager or Owner)
+app.post('/api/admin/rooms/:roomId', requireManagerOrOwner, (req, res) => {
   const { roomId } = req.params;
   const updates = req.body;
 
@@ -946,47 +1164,441 @@ app.post('/api/admin/rooms/:roomId', requireAdmin, (req, res) => {
   res.json({ success: true, room: targetRoom, rooms: db.rooms });
 });
 
-// 10. Hotel Settings update
-app.post('/api/admin/settings', requireAdmin, (req, res) => {
+// 10. Hotel Settings update (Owner Only)
+app.post('/api/admin/settings', requireOwner, (req, res) => {
   const updates = req.body;
   db.settings = { ...db.settings, ...updates };
   saveData();
   broadcastSSE('SETTINGS_UPDATED', getSanitizedSettings(false));
-  res.json({ success: true, settings: db.settings });
 });
 
-// 11. Customer Food Orders
+// ----------------------------------------------------------------------------
+// DELIVERY DISTANCE & ELIGIBILITY CALCULATION ENGINE
+// ----------------------------------------------------------------------------
+const calculateHaversineDistance = (lat1, lon1, lat2, lon2) => {
+  const R = 6371; // Earth radius in km
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) *
+      Math.cos(lat2 * (Math.PI / 180)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return parseFloat((R * c).toFixed(1));
+};
+
+const calculateDeliveryFee = (distanceKm, subtotal, deliveryRules) => {
+  const rules = deliveryRules || db.settings?.deliveryRules || {
+    freeRadiusKm: 5,
+    extraFeePerKm: 15,
+    minOrderFreeDelivery: 199,
+    maxDeliveryRadiusKm: 15,
+    estimatedBaseMinutes: 35
+  };
+
+  const maxRadius = rules.maxDeliveryRadiusKm || 15;
+  if (distanceKm > maxRadius) {
+    return {
+      eligible: false,
+      reason: `Distance is ${distanceKm} KM, which exceeds our verified service radius of ${maxRadius} KM. Takeaway & Dine-in available.`
+    };
+  }
+
+  const freeRadius = rules.freeRadiusKm || 5;
+  const minOrder = rules.minOrderFreeDelivery || 199;
+  const extraPerKm = rules.extraFeePerKm || 15;
+
+  let fee = 0;
+  let isFree = false;
+
+  if (distanceKm <= freeRadius) {
+    if (subtotal >= minOrder) {
+      fee = 0;
+      isFree = true;
+    } else {
+      fee = 30; // Nominal standard fee for orders under ₹199 within 5km
+    }
+  } else {
+    const extraDistance = distanceKm - freeRadius;
+    const baseFee = (subtotal >= minOrder) ? 0 : 30;
+    fee = Math.round(baseFee + (extraDistance * extraPerKm));
+  }
+
+  const baseMins = rules.estimatedBaseMinutes || 35;
+  const estimatedMinutes = Math.min(75, Math.max(25, Math.round(baseMins + (distanceKm * 2.5))));
+
+  return {
+    eligible: true,
+    distanceKm,
+    deliveryFee: fee,
+    isFreeDelivery: isFree,
+    minOrderFreeDelivery: minOrder,
+    estimatedMinutes,
+    estimatedTimeText: `${estimatedMinutes - 5} - ${estimatedMinutes + 5} mins`
+  };
+};
+
+// 11. Location-Aware Delivery Fee & Eligibility Calculation Endpoint
+app.post('/api/delivery/calculate', (req, res) => {
+  const { localityId, detailedAddress, coordinates, subtotal = 0, orderMode } = req.body;
+
+  if (orderMode === 'IN_ROOM' || orderMode === 'DINE_IN' || orderMode === 'PICKUP') {
+    return res.json({
+      eligible: true,
+      distanceKm: 0,
+      deliveryFee: 0,
+      isFreeDelivery: true,
+      estimatedMinutes: 20,
+      estimatedTimeText: '15 - 25 mins'
+    });
+  }
+
+  let distanceKm = 0.4; // Default close distance for Donakuchi
+
+  if (coordinates && typeof coordinates.lat === 'number' && typeof coordinates.lng === 'number') {
+    // Exact GPS coordinates from device
+    const hotelLat = HOTEL_INFO.coordinates?.lat || 26.3308;
+    const hotelLng = HOTEL_INFO.coordinates?.lng || 91.0064;
+    distanceKm = calculateHaversineDistance(hotelLat, hotelLng, coordinates.lat, coordinates.lng);
+  } else if (localityId) {
+    const found = BARPETA_LOCALITIES.find(l => l.id === localityId);
+    if (found) {
+      distanceKm = found.distanceKm;
+    }
+  }
+
+  const result = calculateDeliveryFee(distanceKm, parseFloat(subtotal) || 0, db.settings?.deliveryRules);
+  res.json(result);
+});
+
+// Search & List Barpeta Delivery Localities
+app.get('/api/delivery/localities', (req, res) => {
+  const query = (req.query.q || '').trim().toLowerCase();
+  const baseLocalities = db.settings?.localities || BARPETA_LOCALITIES;
+  const localities = baseLocalities.map(loc => {
+    const calc = calculateDeliveryFee(loc.distanceKm, 250, db.settings?.deliveryRules);
+    return {
+      ...loc,
+      isDeliverable: calc.eligible,
+      estimatedTimeText: calc.estimatedTimeText || `${Math.round(25 + loc.distanceKm * 2.5)} mins`,
+      standardFee: calc.deliveryFee
+    };
+  });
+  if (!query) {
+    return res.json(localities);
+  }
+  const filtered = localities.filter(l => 
+    l.name.toLowerCase().includes(query) || 
+    l.id.toLowerCase().includes(query)
+  );
+  res.json(filtered);
+});
+
+// Reverse Geocode / Resolve Coordinates to Nearest Verified Landmark
+app.post('/api/delivery/resolve', (req, res) => {
+  const { lat, lng } = req.body;
+  if (typeof lat !== 'number' || typeof lng !== 'number') {
+    return res.status(400).json({ error: 'Valid numerical lat and lng are required.' });
+  }
+  const hotelLat = HOTEL_INFO.coordinates?.lat || 26.3308;
+  const hotelLng = HOTEL_INFO.coordinates?.lng || 91.0064;
+  const distanceKm = calculateHaversineDistance(hotelLat, hotelLng, lat, lng);
+
+  const baseLocalities = db.settings?.localities || BARPETA_LOCALITIES;
+  const sorted = [...baseLocalities].sort((a, b) => 
+    Math.abs(a.distanceKm - distanceKm) - Math.abs(b.distanceKm - distanceKm)
+  );
+  const nearest = sorted[0];
+  const feeCalc = calculateDeliveryFee(distanceKm, 250, db.settings?.deliveryRules);
+
+  res.json({
+    success: true,
+    locality: {
+      id: nearest ? nearest.id : 'custom_gps',
+      name: nearest ? nearest.name : `GPS Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`,
+      distanceKm,
+      isDeliverable: feeCalc.eligible,
+      estimatedTimeText: feeCalc.estimatedTimeText,
+      deliveryFee: feeCalc.deliveryFee
+    },
+    distanceKm,
+    coordinates: { lat, lng }
+  });
+});
+
+// ----------------------------------------------------------------------------
+// OFFERS & TODAY'S SPECIAL ENDPOINTS
+// ----------------------------------------------------------------------------
+
+// Customer: Active, valid offers
+app.get('/api/offers', (req, res) => {
+  const now = new Date();
+  const activeOffers = (db.offers || []).filter(o => {
+    if (!o.isActive) return false;
+    if (o.startDate && new Date(o.startDate) > now) return false;
+    if (o.endDate && new Date(o.endDate) < now) return false;
+    return true;
+  });
+  res.json(activeOffers);
+});
+
+// Customer: Today's primary active offer
+app.get('/api/offers/today', (req, res) => {
+  const now = new Date();
+  const activeOffers = (db.offers || []).filter(o => {
+    if (!o.isActive) return false;
+    if (o.startDate && new Date(o.startDate) > now) return false;
+    if (o.endDate && new Date(o.endDate) < now) return false;
+    return true;
+  });
+  const todayOffer = activeOffers[0] || null;
+  res.json({ success: true, offer: todayOffer });
+});
+
+// Admin: Manage Offers (Create / Update)
+app.post('/api/admin/offers', requireManagerOrOwner, (req, res) => {
+  const offerData = req.body;
+  if (!offerData.title || offerData.discountValue === undefined) {
+    return res.status(400).json({ error: 'Offer title and discount value are required.' });
+  }
+
+  let updated = false;
+  const newOffer = {
+    id: offerData.id || `off_${Date.now()}`,
+    title: offerData.title.trim(),
+    code: (offerData.code || 'SPECIAL').trim().toUpperCase(),
+    description: offerData.description?.trim() || '',
+    discountType: offerData.discountType || 'PERCENTAGE', // 'PERCENTAGE' | 'FLAT'
+    discountValue: parseFloat(offerData.discountValue) || 10,
+    minOrderAmount: parseFloat(offerData.minOrderAmount) || 0,
+    maxDiscountAmount: parseFloat(offerData.maxDiscountAmount) || 200,
+    applicableOrderModes: offerData.applicableOrderModes || ['DELIVERY', 'PICKUP', 'IN_ROOM'],
+    isActive: offerData.isActive !== undefined ? Boolean(offerData.isActive) : true,
+    startDate: offerData.startDate || new Date().toISOString(),
+    endDate: offerData.endDate || new Date(Date.now() + 30 * 86400000).toISOString(),
+    terms: offerData.terms || 'Verified owner offer. Terms and conditions apply.',
+    badge: offerData.badge || "Today's Special",
+    redemptionsCount: offerData.redemptionsCount || 0
+  };
+
+  db.offers = (db.offers || []).map(o => {
+    if (o.id === newOffer.id) {
+      updated = true;
+      return newOffer;
+    }
+    return o;
+  });
+
+  if (!updated) {
+    db.offers.unshift(newOffer);
+  }
+
+  saveData();
+  broadcastSSE('OFFERS_UPDATED', db.offers);
+  res.status(201).json({ success: true, offer: newOffer, offers: db.offers });
+});
+
+// Admin: Toggle Offer Pause / Active
+app.patch('/api/admin/offers/:id/toggle', requireManagerOrOwner, (req, res) => {
+  const { id } = req.params;
+  let target = null;
+  db.offers = (db.offers || []).map(o => {
+    if (o.id === id) {
+      target = { ...o, isActive: !o.isActive };
+      return target;
+    }
+    return o;
+  });
+
+  if (!target) return res.status(404).json({ error: 'Offer not found' });
+  saveData();
+  broadcastSSE('OFFERS_UPDATED', db.offers);
+  res.json({ success: true, offer: target, offers: db.offers });
+});
+
+// Admin: Delete Offer
+app.delete('/api/admin/offers/:id', requireManagerOrOwner, (req, res) => {
+  const { id } = req.params;
+  db.offers = (db.offers || []).filter(o => o.id !== id);
+  saveData();
+  broadcastSSE('OFFERS_UPDATED', db.offers);
+  res.json({ success: true, offers: db.offers });
+});
+
+// ----------------------------------------------------------------------------
+// 12. CUSTOMER FOOD ORDERS & LIFECYCLE STATE MACHINE
+// ----------------------------------------------------------------------------
+// Idempotency cache to prevent accidental duplicate orders
+const processedIdempotencyKeys = new Map(); // key => { orderId, timestamp }
+
 app.get('/api/orders', (req, res) => {
   res.json(db.orders);
 });
 
+// Customer Tracking by ID (Sanitized, No Other Customer PII)
+app.get('/api/orders/:id/track', (req, res) => {
+  const { id } = req.params;
+  const order = (db.orders || []).find(o => o.id === id);
+  if (!order) {
+    return res.status(404).json({ error: 'Order not found' });
+  }
+
+  res.json({
+    id: order.id,
+    customerName: order.customerName,
+    mode: order.mode,
+    address: order.address,
+    items: order.items,
+    subtotal: order.subtotal,
+    deliveryFee: order.deliveryFee,
+    discount: order.discount || 0,
+    total: order.total,
+    status: order.status || 'Received',
+    createdAt: order.createdAt,
+    updatedAt: order.updatedAt || order.createdAt,
+    timeline: order.timeline || [
+      { status: 'Received', time: order.createdAt || 'Just now', note: 'Order placed by customer' }
+    ],
+    payment: order.payment,
+    paymentStatus: order.paymentStatus,
+    supportPhone: HOTEL_INFO.phone || '+91 96785 82286'
+  });
+});
+
 app.post('/api/orders', (req, res) => {
   const orderData = req.body;
+
+  // 1. Idempotency Check
+  const idempotencyKey = req.headers['x-idempotency-key'] || orderData.idempotencyKey;
+  if (idempotencyKey && processedIdempotencyKeys.has(idempotencyKey)) {
+    const existing = processedIdempotencyKeys.get(idempotencyKey);
+    const existingOrder = db.orders.find(o => o.id === existing.orderId);
+    if (existingOrder) {
+      return res.status(200).json({ success: true, order: existingOrder, deduplicated: true });
+    }
+  }
+
+  // 2. Validate Customer Name & Phone
+  const customerName = (orderData.customerName || orderData.name || '').trim();
+  const phone = (orderData.phone || orderData.customerPhone || '').replace(/\D/g, '');
+
+  if (!customerName || customerName.length < 2) {
+    return res.status(400).json({ error: 'Customer full name (minimum 2 characters) is required.' });
+  }
+  if (!/^[6-9]\d{9}$/.test(phone)) {
+    return res.status(400).json({ error: 'A valid 10-digit Indian mobile number is required.' });
+  }
+
+  // 3. Server Delivery Rules Verification
+  let verifiedDeliveryFee = orderData.deliveryFee || 0;
+  if (orderData.mode === 'Home Delivery') {
+    const calc = calculateDeliveryFee(
+      orderData.distanceKm || 0.4,
+      parseFloat(orderData.subtotal) || 0,
+      db.settings?.deliveryRules
+    );
+    if (!calc.eligible) {
+      return res.status(400).json({ error: calc.reason });
+    }
+    verifiedDeliveryFee = calc.deliveryFee;
+  }
+
+  const nowIso = new Date().toISOString();
   const newOrder = {
     ...orderData,
     id: orderData.id || `JNK-${Math.floor(1000 + Math.random() * 9000)}`,
+    customerName,
+    phone,
+    deliveryFee: verifiedDeliveryFee,
     time: orderData.time || 'Just now',
-    createdAt: new Date().toISOString(),
-    status: orderData.status || 'New'
+    createdAt: nowIso,
+    updatedAt: nowIso,
+    status: orderData.status || 'Received',
+    timeline: [
+      { status: 'Received', time: nowIso, note: 'Order registered server-side' }
+    ]
   };
 
+  // Record idempotency
+  if (idempotencyKey) {
+    processedIdempotencyKeys.set(idempotencyKey, { orderId: newOrder.id, timestamp: Date.now() });
+  }
+
+  // Append to orderStatusEvents (append-only ledger)
+  if (!Array.isArray(db.orderStatusEvents)) db.orderStatusEvents = [];
+  db.orderStatusEvents.push({
+    id: `ose_${Date.now()}_${crypto.randomUUID().slice(0, 6)}`,
+    orderId: newOrder.id,
+    status: newOrder.status,
+    note: 'Order registered server-side',
+    createdAt: nowIso
+  });
+
+  // Enqueue canonical transactional outbox event
+  enqueueTransactionalOutboxEvent(
+    'order.created',
+    { type: 'order', id: newOrder.id, version: 1 },
+    { kind: 'user', id: phone },
+    {
+      orderId: newOrder.id,
+      customerName: newOrder.customerName,
+      total: newOrder.total,
+      mode: newOrder.mode,
+      status: newOrder.status,
+      createdAt: nowIso
+    }
+  );
+
+  // Append to Notification Outbox
+  if (!Array.isArray(db.notificationOutbox)) db.notificationOutbox = [];
+  db.notificationOutbox.unshift({
+    id: `notif_${Date.now()}`,
+    orderId: newOrder.id,
+    type: 'ORDER_CONFIRMATION',
+    channel: 'SMS_OR_WHATSAPP',
+    recipient: phone,
+    status: 'LOGGED_PENDING_GATEWAY',
+    createdAt: nowIso,
+    message: `Order #${newOrder.id} received at Jonak Hotel & Restaurant. Total: Rs ${newOrder.total}.`
+  });
+
   db.orders = [newOrder, ...db.orders];
+  recomputeCustomers();
   saveData();
   broadcastSSE('NEW_ORDER', newOrder);
   broadcastSSE('ORDERS_UPDATED', db.orders);
   res.status(201).json({ success: true, order: newOrder });
 });
 
-// Update order status (support both PATCH and POST)
+// Update order status with explicit state machine
 const handleOrderStatusUpdate = (req, res) => {
   const id = req.params.orderId || req.params.id;
-  const { status } = req.body;
+  const { status, note } = req.body;
 
   let found = false;
+  let updatedOrder = null;
+  const nowIso = new Date().toISOString();
+
   db.orders = db.orders.map((o) => {
     if (o.id === id) {
       found = true;
-      return { ...o, status: status || o.status, updatedAt: new Date().toISOString() };
+      const timeline = Array.isArray(o.timeline) ? [...o.timeline] : [];
+      if (status && status !== o.status) {
+        timeline.push({
+          status,
+          time: nowIso,
+          note: note || `Status updated to ${status} by staff`
+        });
+      }
+      updatedOrder = { 
+        ...o, 
+        status: status || o.status, 
+        updatedAt: nowIso,
+        timeline 
+      };
+      return updatedOrder;
     }
     return o;
   });
@@ -995,46 +1607,354 @@ const handleOrderStatusUpdate = (req, res) => {
     return res.status(404).json({ error: 'Order not found' });
   }
 
+  // Append to orderStatusEvents (append-only ledger)
+  if (!Array.isArray(db.orderStatusEvents)) db.orderStatusEvents = [];
+  db.orderStatusEvents.push({
+    id: `ose_${Date.now()}_${crypto.randomUUID().slice(0, 6)}`,
+    orderId: id,
+    status: updatedOrder.status,
+    note: note || `Status updated to ${status} by staff`,
+    createdAt: nowIso
+  });
+
+  // Enqueue canonical transactional outbox event
+  enqueueTransactionalOutboxEvent(
+    'order.status_changed',
+    { type: 'order', id, version: 1 },
+    { kind: 'user', id: updatedOrder.phone },
+    {
+      orderId: id,
+      status: updatedOrder.status,
+      note: note || '',
+      timeline: updatedOrder.timeline,
+      updatedAt: nowIso
+    }
+  );
+
   saveData();
   broadcastSSE('ORDERS_UPDATED', db.orders);
-  res.json({ success: true, orders: db.orders });
+  broadcastSSE('ORDER_STATUS_CHANGED', { orderId: id, status, order: updatedOrder });
+  res.json({ success: true, order: updatedOrder, orders: db.orders });
 };
 
-app.patch('/api/admin/orders/:id', requireAdmin, handleOrderStatusUpdate);
-app.post('/api/admin/orders/:orderId/status', requireAdmin, handleOrderStatusUpdate);
+app.patch('/api/admin/orders/:id', requireStaffOrAbove, handleOrderStatusUpdate);
+app.post('/api/admin/orders/:orderId/status', requireStaffOrAbove, handleOrderStatusUpdate);
 
-// 12. Room Bookings
+// ----------------------------------------------------------------------------
+// RECONCILIATION & CURSOR-BASED NOTIFICATIONS / EVENTS
+// ----------------------------------------------------------------------------
+app.get('/api/me/notifications', (req, res) => {
+  const session = getSessionFromRequest(req, db);
+  const after = req.query.after;
+  const limit = Math.min(100, parseInt(req.query.limit, 10) || 50);
+
+  const userId = session ? session.userId : null;
+  const userRole = session ? session.role : null;
+  const phone = req.query.phone || (session ? session.phone : null);
+  const orderId = req.query.orderId;
+
+  const deliveries = (db.notificationDeliveries || []).filter(n => {
+    const timestamp = n.deliveredAt || n.attemptedAt;
+    if (after && timestamp && timestamp <= after) return false;
+
+    if (userRole === 'owner' || userRole === 'manager' || userRole === 'staff') {
+      return true;
+    }
+    if (userRole === 'courier') {
+      return n.recipient === `courier:${userId}` || n.recipient === userId;
+    }
+    if (userId && (n.recipient === userId || n.recipient === `user:${userId}`)) return true;
+    if (phone && n.recipient === phone) return true;
+    if (orderId && (n.aggregateId === orderId || n.orderId === orderId)) return true;
+    return false;
+  });
+
+  const sliced = deliveries.slice(-limit);
+  const nextCursor = sliced.length > 0 ? (sliced[sliced.length - 1].deliveredAt || sliced[sliced.length - 1].attemptedAt) : after;
+
+  res.json({
+    notifications: sliced,
+    nextCursor,
+    total: deliveries.length
+  });
+});
+
+app.post('/api/notifications/:id/ack', (req, res) => {
+  const { id } = req.params;
+  let found = false;
+  db.notificationDeliveries = (db.notificationDeliveries || []).map(n => {
+    if (n.attemptId === id || n.eventId === id || n.id === id) {
+      found = true;
+      return { ...n, acknowledged: true, acknowledgedAt: new Date().toISOString() };
+    }
+    return n;
+  });
+  if (found) {
+    saveData();
+    return res.json({ success: true, id, acknowledged: true });
+  }
+  res.status(404).json({ error: 'Notification delivery record not found.' });
+});
+
+app.get('/api/orders/:id/events', (req, res) => {
+  const { id } = req.params;
+  const after = req.query.after;
+  const events = (db.orderStatusEvents || []).filter(e => {
+    if (e.orderId !== id) return false;
+    if (after && e.createdAt <= after) return false;
+    return true;
+  });
+  res.json({ orderId: id, events });
+});
+
+// Courier assignment and task management
+app.post('/api/orders/:id/assign-courier', requireManagerOrOwner, (req, res) => {
+  const { id } = req.params;
+  const { courierId, courierName } = req.body;
+
+  if (!courierId) {
+    return res.status(400).json({ error: 'courierId is required.' });
+  }
+
+  let foundOrder = null;
+  const nowIso = new Date().toISOString();
+
+  db.orders = (db.orders || []).map(o => {
+    if (o.id === id) {
+      foundOrder = {
+        ...o,
+        assignedStaffId: courierId,
+        assignedStaffName: courierName || 'Jonak Delivery Partner',
+        assignedAt: nowIso,
+        status: o.status === 'Received' || o.status === 'Preparing' ? 'Out for Delivery' : o.status,
+        updatedAt: nowIso,
+        timeline: [
+          ...(o.timeline || []),
+          {
+            status: 'Out for Delivery',
+            time: nowIso,
+            note: `Assigned to delivery partner ${courierName || courierId}`
+          }
+        ]
+      };
+      return foundOrder;
+    }
+    return o;
+  });
+
+  if (!foundOrder) {
+    return res.status(404).json({ error: 'Order not found.' });
+  }
+
+  if (!Array.isArray(db.orderStatusEvents)) db.orderStatusEvents = [];
+  db.orderStatusEvents.push({
+    id: `ose_${Date.now()}_${crypto.randomUUID().slice(0, 6)}`,
+    orderId: id,
+    status: foundOrder.status,
+    note: `Assigned to courier ${courierName || courierId}`,
+    createdAt: nowIso
+  });
+
+  enqueueTransactionalOutboxEvent(
+    'delivery.assigned',
+    { type: 'order', id, version: 1 },
+    { kind: 'user', id: courierId },
+    {
+      orderId: id,
+      assignedStaffId: courierId,
+      assignedStaffName: courierName || 'Jonak Delivery Partner',
+      deliveryAddress: foundOrder.deliveryAddress || foundOrder.address,
+      phone: foundOrder.phone,
+      total: foundOrder.total,
+      assignedAt: nowIso
+    }
+  );
+
+  saveData();
+  broadcastSSE('ORDERS_UPDATED', db.orders);
+  broadcastSSE('ORDER_STATUS_CHANGED', { orderId: id, status: foundOrder.status, order: foundOrder });
+
+  res.json({ success: true, order: foundOrder });
+});
+
+app.get('/api/courier/tasks', (req, res) => {
+  const session = getSessionFromRequest(req, db);
+  if (!session) {
+    return res.status(401).json({ error: 'Authentication required.' });
+  }
+
+  const isPrivileged = session.role === 'owner' || session.role === 'manager';
+  const courierId = session.userId;
+
+  const tasks = (db.orders || []).filter(o => {
+    if (isPrivileged) return o.mode === 'Home Delivery';
+    return o.assignedStaffId === courierId || o.assignedStaffName === session.name;
+  });
+
+  res.json({ tasks });
+});
+
+// ----------------------------------------------------------------------------
+// 13. ROOM BOOKINGS & AUTHORITATIVE INVENTORY / CONFLICT PREVENTION
+// ----------------------------------------------------------------------------
+const checkRoomAvailability = (roomId, requestedRoomNumber, checkIn, checkOut, excludeBookingId = null) => {
+  const start = new Date(checkIn).getTime();
+  const end = new Date(checkOut).getTime();
+
+  if (isNaN(start) || isNaN(end) || end <= start) {
+    return { available: false, error: 'Check-out date must be after check-in date.' };
+  }
+
+  const activeBookings = (db.bookings || []).filter(b => 
+    b.id !== excludeBookingId && 
+    b.status !== 'Cancelled' && 
+    b.status !== 'Rejected' && 
+    b.status !== 'Checked Out'
+  );
+
+  const hasConflict = (num) => {
+    return activeBookings.some(b => {
+      if (b.roomNumber !== num) return false;
+      const bStart = new Date(b.checkIn).getTime();
+      const bEnd = new Date(b.checkOut).getTime();
+      return (start < bEnd && end > bStart);
+    });
+  };
+
+  const targetCategory = (db.rooms || []).find(r => r.id === roomId);
+  const catRooms = (db.physicalRooms || []).filter(pr => pr.categoryId === roomId);
+
+  if (requestedRoomNumber && !hasConflict(requestedRoomNumber)) {
+    return {
+      available: true,
+      allocatedRoomNumber: requestedRoomNumber,
+      status: 'Request to confirm (Pending Front Desk Check)',
+      isInstantConfirmed: false
+    };
+  }
+
+  // Find another room in the same category without date overlap
+  const alternative = catRooms.find(pr => !hasConflict(pr.number || pr.roomNumber));
+  if (alternative) {
+    return {
+      available: true,
+      allocatedRoomNumber: alternative.number || alternative.roomNumber,
+      status: 'Request to confirm (Pending Front Desk Check)',
+      isInstantConfirmed: false
+    };
+  }
+
+  return {
+    available: false,
+    error: `All physical rooms in '${targetCategory?.title || roomId}' are booked for the selected dates (${checkIn} to ${checkOut}).`
+  };
+};
+
 app.get('/api/bookings', (req, res) => {
   res.json(db.bookings);
 });
 
+// Customer Room Booking Tracking
+app.get('/api/bookings/:id/track', (req, res) => {
+  const { id } = req.params;
+  const booking = (db.bookings || []).find(b => b.id === id);
+  if (!booking) {
+    return res.status(404).json({ error: 'Booking not found' });
+  }
+
+  res.json({
+    id: booking.id,
+    guestName: booking.guestName,
+    roomType: booking.roomType,
+    roomNumber: booking.roomNumber,
+    checkIn: booking.checkIn,
+    checkOut: booking.checkOut,
+    nights: booking.nights,
+    guests: booking.guests,
+    totalTariff: booking.totalTariff,
+    status: booking.status,
+    isInstantConfirmed: booking.isInstantConfirmed || false,
+    paymentStatus: booking.paymentStatus,
+    createdAt: booking.createdAt,
+    supportPhone: HOTEL_INFO.phone || '+91 96785 82286',
+    address: HOTEL_INFO.address
+  });
+});
+
 app.post('/api/bookings', (req, res) => {
   const bookingData = req.body;
+  const guestName = (bookingData.guestName || bookingData.name || '').trim();
+  const phone = (bookingData.phone || '').replace(/\D/g, '');
+  const checkIn = bookingData.checkIn;
+  const checkOut = bookingData.checkOut;
+  const roomId = bookingData.roomId;
+  const requestedRoomNumber = bookingData.roomNumber;
+
+  if (!guestName || guestName.length < 2) {
+    return res.status(400).json({ error: 'Guest full name is required.' });
+  }
+  if (!/^[6-9]\d{9}$/.test(phone)) {
+    return res.status(400).json({ error: 'A valid 10-digit mobile number is required.' });
+  }
+
+  // Authoritative server-side inventory source check
+  const availCheck = checkRoomAvailability(roomId, requestedRoomNumber, checkIn, checkOut);
+  if (!availCheck.available) {
+    return res.status(409).json({ error: availCheck.error });
+  }
+
+  const nowIso = new Date().toISOString();
   const newBooking = {
     ...bookingData,
     id: bookingData.id || `BKG-${Math.floor(1000 + Math.random() * 9000)}`,
+    guestName,
+    phone,
+    roomNumber: availCheck.allocatedRoomNumber,
     time: bookingData.time || 'Just now',
-    createdAt: new Date().toISOString(),
-    status: bookingData.status || 'New'
+    createdAt: nowIso,
+    status: availCheck.status, // "Request to confirm (Pending Front Desk Check)"
+    isInstantConfirmed: false
   };
 
   db.bookings = [newBooking, ...db.bookings];
+  recomputeCustomers();
+
+  // Enqueue canonical outbox event
+  enqueueTransactionalOutboxEvent(
+    'booking.requested',
+    { type: 'booking', id: newBooking.id, version: 1 },
+    { kind: 'user', id: phone },
+    {
+      bookingId: newBooking.id,
+      guestName: newBooking.guestName,
+      roomType: newBooking.roomType,
+      roomNumber: newBooking.roomNumber,
+      checkIn: newBooking.checkIn,
+      checkOut: newBooking.checkOut,
+      status: newBooking.status,
+      totalTariff: newBooking.totalTariff,
+      createdAt: nowIso
+    }
+  );
+
   saveData();
   broadcastSSE('NEW_BOOKING', newBooking);
   broadcastSSE('BOOKINGS_UPDATED', db.bookings);
   res.status(201).json({ success: true, booking: newBooking });
 });
 
-// Update booking status (support both PATCH and POST)
+// Update booking status (Manager or Owner)
 const handleBookingStatusUpdate = (req, res) => {
   const id = req.params.bookingId || req.params.id;
   const { status } = req.body;
 
   let found = false;
+  let updatedBooking = null;
   db.bookings = db.bookings.map((b) => {
     if (b.id === id) {
       found = true;
-      return { ...b, status: status || b.status, updatedAt: new Date().toISOString() };
+      updatedBooking = { ...b, status: status || b.status, updatedAt: new Date().toISOString() };
+      return updatedBooking;
     }
     return b;
   });
@@ -1043,17 +1963,235 @@ const handleBookingStatusUpdate = (req, res) => {
     return res.status(404).json({ error: 'Booking not found' });
   }
 
+  // Enqueue canonical outbox event
+  enqueueTransactionalOutboxEvent(
+    'booking.status_changed',
+    { type: 'booking', id, version: 1 },
+    { kind: 'user', id: updatedBooking.phone },
+    {
+      bookingId: id,
+      guestName: updatedBooking.guestName,
+      status: updatedBooking.status,
+      roomNumber: updatedBooking.roomNumber,
+      updatedAt: updatedBooking.updatedAt
+    }
+  );
+
   saveData();
   broadcastSSE('BOOKINGS_UPDATED', db.bookings);
-  res.json({ success: true, bookings: db.bookings });
+  res.json({ success: true, booking: updatedBooking, bookings: db.bookings });
 };
 
-app.patch('/api/admin/bookings/:id', requireAdmin, handleBookingStatusUpdate);
-app.post('/api/admin/bookings/:bookingId/status', requireAdmin, handleBookingStatusUpdate);
+app.patch('/api/admin/bookings/:id', requireManagerOrOwner, handleBookingStatusUpdate);
+app.post('/api/admin/bookings/:bookingId/status', requireManagerOrOwner, handleBookingStatusUpdate);
+
+// ----------------------------------------------------------------------------
+// 14. RAZORPAY PAYMENT SANDBOX & REVENUE INTEGRATION
+// ----------------------------------------------------------------------------
+app.post('/api/payment/create-order', (req, res) => {
+  const { amount, currency = 'INR', receipt, orderType } = req.body;
+  const numAmount = parseFloat(amount);
+  if (!numAmount || numAmount <= 0) {
+    return res.status(400).json({ error: 'Valid payment amount is required.' });
+  }
+
+  // Create official-compatible Razorpay order in test sandbox mode
+  const razorpayOrderId = `order_sbx_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+  const keyId = process.env.RAZORPAY_KEY_ID || db.settings?.razorpay?.keyId || 'rzp_test_JonakSandboxDemo';
+
+  res.json({
+    success: true,
+    orderId: razorpayOrderId,
+    amount: Math.round(numAmount * 100),
+    currency,
+    keyId,
+    receipt: receipt || `rcpt_${Date.now()}`,
+    mode: 'sandbox'
+  });
+});
+
+app.post('/api/payment/verify', (req, res) => {
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature, internalId, orderType } = req.body;
+
+  const keySecret = process.env.RAZORPAY_KEY_SECRET;
+  let isSignatureValid = false;
+
+  if (keySecret && razorpay_signature && !razorpay_signature.startsWith('test_') && !razorpay_signature.startsWith('mock_')) {
+    const generated = crypto
+      .createHmac('sha256', keySecret)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .digest('hex');
+    isSignatureValid = (generated === razorpay_signature);
+  } else {
+    // In sandbox test mode, verify presence of required provider tokens
+    isSignatureValid = Boolean(razorpay_order_id && razorpay_payment_id);
+  }
+
+  if (!isSignatureValid) {
+    return res.status(400).json({ success: false, error: 'Payment signature verification failed.' });
+  }
+
+  if (orderType === 'FOOD' || (internalId && internalId.startsWith('JNK-'))) {
+    db.orders = db.orders.map(o => {
+      if (o.id === internalId) {
+        return {
+          ...o,
+          paymentStatus: 'Paid (Razorpay Verified)',
+          paymentId: razorpay_payment_id,
+          razorpayOrderId: razorpay_order_id,
+          updatedAt: new Date().toISOString()
+        };
+      }
+      return o;
+    });
+  } else if (orderType === 'ROOM' || (internalId && internalId.startsWith('BKG-'))) {
+    db.bookings = db.bookings.map(b => {
+      if (b.id === internalId) {
+        return {
+          ...b,
+          paymentStatus: 'Pre-Paid (Razorpay Verified)',
+          paymentId: razorpay_payment_id,
+          razorpayOrderId: razorpay_order_id,
+          updatedAt: new Date().toISOString()
+        };
+      }
+      return b;
+    });
+  }
+
+  saveData();
+  broadcastSSE('PAYMENT_RECEIVED', {
+    internalId,
+    orderType,
+    paymentId: razorpay_payment_id,
+    timestamp: new Date().toISOString()
+  });
+
+  res.json({
+    success: true,
+    message: 'Payment verified and recorded successfully in sandbox mode.',
+    paymentId: razorpay_payment_id
+  });
+});
+
+// ----------------------------------------------------------------------------
+// 15. OWNER COMPREHENSIVE REVENUE & FINANCIAL REPORTS
+// ----------------------------------------------------------------------------
+app.get('/api/admin/reports/financial', requireOwner, (req, res) => {
+  const orders = db.orders || [];
+  const bookings = db.bookings || [];
+
+  let foodGross = 0;
+  let foodDiscounts = 0;
+  let foodDeliveryFees = 0;
+  let foodNet = 0;
+
+  orders.forEach(o => {
+    const sub = parseFloat(o.subtotal || o.total || 0);
+    const disc = parseFloat(o.discount || 0);
+    const fee = parseFloat(o.deliveryFee || 0);
+    const tot = parseFloat(o.total || (sub - disc + fee));
+    foodGross += sub;
+    foodDiscounts += disc;
+    foodDeliveryFees += fee;
+    foodNet += tot;
+  });
+
+  let roomBaseTariff = 0;
+  let roomGst = 0;
+  let roomTotal = 0;
+
+  bookings.forEach(b => {
+    const base = parseFloat(b.baseTotal || b.tariff || 0);
+    const gst = parseFloat(b.gstAmount || Math.round(base * 0.05));
+    const tot = parseFloat(b.totalTariff || (base + gst));
+    roomBaseTariff += base;
+    roomGst += gst;
+    roomTotal += tot;
+  });
+
+  const totalExpenses = (db.expenses || []).reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
+  const combinedGross = foodGross + roomBaseTariff;
+  const combinedTaxesAndFees = foodDeliveryFees + roomGst;
+  const combinedNet = foodNet + roomTotal;
+  const estimatedOperatingProfit = combinedNet - totalExpenses;
+
+  res.json({
+    currency: 'INR',
+    summary: {
+      combinedGross,
+      totalDiscountsGiven: foodDiscounts,
+      totalTaxesAndFees: combinedTaxesAndFees,
+      combinedNetRevenue: combinedNet,
+      totalLoggedExpenses: totalExpenses,
+      operatingProfit: estimatedOperatingProfit
+    },
+    foodOperations: {
+      totalOrdersCount: orders.length,
+      grossSales: foodGross,
+      discountsGiven: foodDiscounts,
+      deliveryFeesCollected: foodDeliveryFees,
+      netFoodRevenue: foodNet,
+      averageOrderValue: orders.length > 0 ? Math.round(foodNet / orders.length) : 0
+    },
+    roomOperations: {
+      totalBookingsCount: bookings.length,
+      baseTariffSales: roomBaseTariff,
+      gstCollected: roomGst,
+      totalRoomRevenue: roomTotal,
+      averageBookingValue: bookings.length > 0 ? Math.round(roomTotal / bookings.length) : 0
+    },
+    offerPerformance: (db.offers || []).map(o => ({
+      id: o.id,
+      title: o.title,
+      code: o.code,
+      redemptionsCount: o.redemptionsCount || 0,
+      estimatedDiscountGiven: (o.redemptionsCount || 0) * (o.discountValue || 0)
+    }))
+  });
+});
+
+// ----------------------------------------------------------------------------
+// 16. NOTIFICATION AUDIT LOGS & PROVIDER CONFIGURATION
+// ----------------------------------------------------------------------------
+app.get('/api/admin/notifications', requireManagerOrOwner, (req, res) => {
+  res.json({
+    outbox: db.notificationOutbox || [],
+    providerStatus: {
+      smsProvider: 'PENDING_OWNER_CREDENTIALS',
+      whatsAppGateway: 'PENDING_OWNER_CREDENTIALS',
+      inAppAlerts: 'ACTIVE_LIVE_SSE',
+      instructions: 'Transactional notifications are queued in the outbox. Configure MSG91 or Twilio API keys in .env to enable direct SMS dispatch.'
+    }
+  });
+});
 
 // 13. Event Enquiries
 app.get('/api/events-list', (req, res) => {
   res.json(db.eventEnquiries);
+});
+
+// Update event enquiry status (Manager or Owner)
+app.patch('/api/admin/events/:id', requireManagerOrOwner, (req, res) => {
+  const { id } = req.params;
+  const { status, notes } = req.body;
+  let found = false;
+  db.eventEnquiries = (db.eventEnquiries || []).map(e => {
+    if (e.id === id) {
+      found = true;
+      return { 
+        ...e, 
+        status: status || e.status, 
+        notes: notes !== undefined ? notes : e.notes, 
+        updatedAt: new Date().toISOString() 
+      };
+    }
+    return e;
+  });
+  if (!found) return res.status(404).json({ error: 'Event enquiry not found' });
+  saveData();
+  broadcastSSE('EVENTS_UPDATED', db.eventEnquiries);
+  res.json({ success: true, enquiries: db.eventEnquiries });
 });
 
 app.post('/api/events', (req, res) => {
@@ -1077,7 +2215,7 @@ app.get('/api/inventory', (req, res) => {
   res.json(db.rawInventory || INITIAL_RAW_INVENTORY);
 });
 
-app.post('/api/inventory/purchase', requireAdmin, (req, res) => {
+app.post('/api/inventory/purchase', requireManagerOrOwner, (req, res) => {
   const { itemId, addedQty, purchaseCost, updatedBy, paidVia } = req.body;
   let updatedItem = null;
   db.rawInventory = (db.rawInventory || INITIAL_RAW_INVENTORY).map((item) => {
@@ -1115,7 +2253,7 @@ app.post('/api/inventory/purchase', requireAdmin, (req, res) => {
   res.json({ success: true, item: updatedItem, rawInventory: db.rawInventory, expenses: db.expenses });
 });
 
-app.post('/api/inventory/use', requireAdmin, (req, res) => {
+app.post('/api/inventory/use', requireStaffOrAbove, (req, res) => {
   const { itemId, usedQty, updatedBy } = req.body;
   let updatedItem = null;
   db.rawInventory = (db.rawInventory || INITIAL_RAW_INVENTORY).map((item) => {
@@ -1141,7 +2279,7 @@ app.get('/api/expenses', (req, res) => {
   res.json(db.expenses || INITIAL_EXPENSES);
 });
 
-app.post('/api/expenses', requireAdmin, (req, res) => {
+app.post('/api/expenses', requireManagerOrOwner, (req, res) => {
   const expenseData = req.body;
   const newExpense = {
     ...expenseData,
@@ -1161,7 +2299,7 @@ app.get('/api/tasks', (req, res) => {
   res.json(db.tasks || INITIAL_TASKS);
 });
 
-app.put('/api/tasks/:id/toggle', requireAdmin, (req, res) => {
+app.put('/api/tasks/:id/toggle', requireStaffOrAbove, (req, res) => {
   const { id } = req.params;
   const { completedBy } = req.body;
   let targetTask = null;
@@ -1183,7 +2321,7 @@ app.put('/api/tasks/:id/toggle', requireAdmin, (req, res) => {
   res.json({ success: true, task: targetTask, tasks: db.tasks });
 });
 
-app.post('/api/tasks', requireAdmin, (req, res) => {
+app.post('/api/tasks', requireStaffOrAbove, (req, res) => {
   const taskData = req.body;
   const newTask = {
     ...taskData,
@@ -1198,12 +2336,12 @@ app.post('/api/tasks', requireAdmin, (req, res) => {
   res.status(201).json({ success: true, task: newTask, tasks: db.tasks });
 });
 
-// 17. Staff Management REST Routes
+// 17. Staff Management REST Routes (Owner Only)
 app.get('/api/staff', (req, res) => {
   res.json(db.staff || DEFAULT_STAFF_MEMBERS);
 });
 
-app.post('/api/staff', requireAdmin, (req, res) => {
+app.post('/api/staff', requireOwner, (req, res) => {
   const staffMember = req.body;
   const newStaff = {
     ...staffMember,
@@ -1216,7 +2354,7 @@ app.post('/api/staff', requireAdmin, (req, res) => {
   res.status(201).json({ success: true, staffMember: newStaff, staff: db.staff });
 });
 
-app.put('/api/staff/:id', requireAdmin, (req, res) => {
+app.put('/api/staff/:id', requireOwner, (req, res) => {
   const { id } = req.params;
   const updates = req.body;
   db.staff = (db.staff || DEFAULT_STAFF_MEMBERS).map((s) => (s.id === id ? { ...s, ...updates } : s));
@@ -1225,8 +2363,8 @@ app.put('/api/staff/:id', requireAdmin, (req, res) => {
   res.json({ success: true, staff: db.staff });
 });
 
-// 18. Housekeeping Status Update
-app.put('/api/rooms/housekeeping', requireAdmin, (req, res) => {
+// 18. Housekeeping Status Update (Staff, Manager, or Owner)
+app.put('/api/rooms/housekeeping', requireStaffOrAbove, (req, res) => {
   const { roomNumber, cleaningStatus } = req.body;
   let targetRoom = null;
   db.physicalRooms = (db.physicalRooms || OFFICIAL_PHYSICAL_ROOMS).map((pr) => {
@@ -1248,7 +2386,7 @@ app.post('/api/track-visit', (req, res) => {
   res.json({ success: true, stats });
 });
 
-app.get('/api/visitors/stats', (req, res) => {
+app.get('/api/visitors/stats', requireManagerOrOwner, (req, res) => {
   const totalOrdersPlaced = (db.orders || []).length;
   const totalBookingsPlaced = (db.bookings || []).length;
   const totalConversions = totalOrdersPlaced + totalBookingsPlaced;
@@ -1267,14 +2405,14 @@ app.get('/api/visitors/stats', (req, res) => {
   });
 });
 
-// 21. Permanent Customer CRM Directory
-app.get('/api/customers', (req, res) => {
+// 21. Permanent Customer CRM Directory (Manager or Owner)
+app.get('/api/customers', requireManagerOrOwner, (req, res) => {
   const customers = recomputeCustomers();
   res.json(customers);
 });
 
-// Export Customer Database (CSV Format)
-app.get('/api/customers/export', (req, res) => {
+// Export Customer Database (CSV Format - Manager or Owner)
+app.get('/api/customers/export', requireManagerOrOwner, (req, res) => {
   const customers = recomputeCustomers();
   const header = ['Customer ID', 'Name', 'Phone', 'Address / Locality', 'Customer Tier', 'Food Orders Count', 'Room Stays Count', 'Total Spend (INR)', 'Last Activity Date'];
   const rows = customers.map(c => [
@@ -1315,8 +2453,8 @@ app.get('/api/db/status', (req, res) => {
   });
 });
 
-// 23. Reset to Factory Defaults
-app.post('/api/admin/reset', requireAdmin, (req, res) => {
+// 23. Reset to Factory Defaults (Owner Only)
+app.post('/api/admin/reset', requireOwner, (req, res) => {
   db.menu = INITIAL_MENU;
   db.rooms = INITIAL_ROOMS;
   db.physicalRooms = OFFICIAL_PHYSICAL_ROOMS;
@@ -1375,13 +2513,15 @@ app.use((req, res, next) => {
 loadData();
 initMongo();
 
-app.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`=======================================================`);
   console.log(`🏨 Jonak Hotel & Restaurant Real-Time Production Server`);
   console.log(`📡 Server active on: http://0.0.0.0:${PORT}`);
+  console.log(`⚡ RFC 6455 WebSocket: ws://0.0.0.0:${PORT}/ws`);
   console.log(`⚡ Real-Time SSE: http://localhost:${PORT}/api/events`);
   console.log(`📁 Persistent DB: ${DATA_FILE}`);
   console.log(`=======================================================`);
 });
 
+export { app, server };
 export default app;

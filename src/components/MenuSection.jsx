@@ -136,6 +136,24 @@ export const MenuSection = ({ onOpenCart }) => {
               <span>Free Delivery Radius: {settings.freeDeliveryRadiusKm} KM</span>
             </div>
           </div>
+
+          {/* Asset Transparency Note */}
+          <div style={{ marginTop: '0.85rem' }}>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.45rem',
+              background: 'rgba(212, 175, 55, 0.08)',
+              border: '1px dashed rgba(212, 175, 55, 0.35)',
+              padding: '0.35rem 0.85rem',
+              borderRadius: '6px',
+              color: 'var(--gold-light)',
+              fontSize: '0.74rem'
+            }}>
+              <AlertCircle size={13} color="var(--gold-primary)" />
+              <span>Verified 82 recipes from official menu.pdf • Kitchen dish photography awaiting owner approval</span>
+            </div>
+          </div>
         </div>
 
         {/* Search & Filter Control Bar */}
@@ -412,6 +430,23 @@ export const MenuSection = ({ onOpenCart }) => {
                           <span>CHEF SPECIAL</span>
                         </div>
                       )}
+
+                      {/* Photo status badge for asset transparency */}
+                      <span style={{
+                        position: 'absolute',
+                        bottom: '6px',
+                        right: '8px',
+                        fontSize: '0.62rem',
+                        background: 'rgba(7, 11, 20, 0.78)',
+                        color: 'rgba(255, 255, 255, 0.75)',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        letterSpacing: '0.3px',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        pointerEvents: 'none'
+                      }}>
+                        Preview • Kitchen Photo Pending
+                      </span>
 
                       {/* Sold Out Overlay */}
                       {!dish.inStock && (
