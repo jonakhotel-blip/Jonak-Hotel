@@ -19,6 +19,7 @@ import {
   AlertCircle,
   Sparkles,
   ArrowRight,
+  ArrowLeft,
   Copy,
   ExternalLink,
   Check,
@@ -517,19 +518,41 @@ export const CartDrawer = ({ isOpen, onClose }) => {
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            aria-label="Close Cart"
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text-muted)',
-              cursor: 'pointer',
-              padding: '0.35rem'
-            }}
-          >
-            <X size={22} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <button
+              onClick={onClose}
+              aria-label="Back to Menu"
+              style={{
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid var(--border-gold)',
+                borderRadius: '6px',
+                color: 'var(--text-secondary)',
+                cursor: 'pointer',
+                padding: '0.35rem 0.65rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+                fontSize: '0.8rem',
+                fontWeight: 600
+              }}
+            >
+              <ArrowLeft size={14} />
+              <span>Back</span>
+            </button>
+            <button
+              onClick={onClose}
+              aria-label="Close Cart"
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-muted)',
+                cursor: 'pointer',
+                padding: '0.35rem'
+              }}
+            >
+              <X size={22} />
+            </button>
+          </div>
         </div>
 
         {/* Order Placed Success View with Real-time Timeline */}

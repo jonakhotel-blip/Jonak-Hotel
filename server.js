@@ -1733,6 +1733,8 @@ app.post('/api/orders', (req, res) => {
 
   db.orders = [newOrder, ...db.orders];
   recomputeCustomers();
+  // 🔔 Enqueue staff WhatsApp alert for new food order
+  enqueueStaffAlert('order', newOrder);
   saveData();
   broadcastSSE('NEW_ORDER', newOrder);
   broadcastSSE('ORDERS_UPDATED', db.orders);
@@ -2160,6 +2162,8 @@ app.post('/api/bookings', (req, res) => {
     }
   );
 
+  // 🔔 Enqueue staff WhatsApp alert for new room booking
+  enqueueStaffAlert('booking', newBooking);
   saveData();
   broadcastSSE('NEW_BOOKING', newBooking);
   broadcastSSE('BOOKINGS_UPDATED', db.bookings);
@@ -2389,6 +2393,89 @@ app.get('/api/admin/notifications', requireManagerOrOwner, (req, res) => {
     }
   });
 });
+
+// Staff Notification Poll Endpoint (AdminPanel polls every 30s)
+// Returns pending notifications since the last seen timestamp
+app.get('/api/notifications/staff', (req, res) => {
+  const since = req.query.since ? new Date(req.query.since) : new Date(Date.now() - 60000);
+  const pending = (db.notificationOutbox || []).filter(n => {
+    const created = new Date(n.createdAt || 0);
+    return created >= since;
+  });
+  res.json({
+    notifications: pending.slice(0, 20),
+    totalUnread: pending.length,
+    serverTime: new Date().toISOString()
+  });
+});
+
+// Generate WhatsApp Staff Alert URL (called server-side when order/booking created)
+const buildStaffWhatsAppUrl = (type, data) => {
+  const STAFF_PHONE = '919678582286';
+  let text = '';
+  if (type === 'order') {
+    const items = (data.items || []).map(i => `• ${i.name} x${i.qty || 1} = ₹${i.price * (i.qty || 1)}`).join('\n');
+    text =
+`🔔 NEW FOOD ORDER — JONAK HOTEL & RESTAURANT
+━━━━━━━━━━━━━━━━━━━━━━━━━
+📦 Order ID: #${data.id}
+👤 Customer: ${data.customerName || data.customer_name}
+📞 Phone: ${data.phone || data.customer_phone}
+🏠 Mode: ${data.mode || data.order_status || 'Home Delivery'}
+📍 Address: ${data.address || data.delivery_address || 'N/A'}
+━━━━━━━━━━━━━━━━━━━━━━━━━
+ITEMS:
+${items}
+━━━━━━━━━━━━━━━━━━━━━━━━━
+💰 Total: ₹${data.total || data.total_amount}
+💳 Payment: ${data.payment || data.payment_mode}
+⏰ Time: ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
+━━━━━━━━━━━━━━━━━━━━━━━━━
+Please confirm and prepare immediately!`;
+  } else if (type === 'booking') {
+    text =
+`🔔 NEW ROOM BOOKING — JONAK HOTEL & RESTAURANT
+━━━━━━━━━━━━━━━━━━━━━━━━━
+🏨 Booking ID: #${data.id}
+👤 Guest: ${data.guestName || data.customer_name}
+📞 Phone: ${data.phone || data.customer_phone}
+🛏️ Room: ${data.roomType || data.room_name} (Room ${data.roomNumber || data.room_number})
+📅 Check-In: ${data.checkIn || data.check_in_date}
+📅 Check-Out: ${data.checkOut || data.check_out_date}
+👥 Guests: ${data.guests || data.guestsCount || 1}
+━━━━━━━━━━━━━━━━━━━━━━━━━
+💰 Total: ₹${data.totalTariff || data.totalPrice || data.total_amount}
+💳 Payment: ${data.paymentMethod || data.payment_mode}
+⏰ Time: ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
+━━━━━━━━━━━━━━━━━━━━━━━━━
+Please prepare the room and confirm the booking!`;
+  }
+  return `https://wa.me/${STAFF_PHONE}?text=${encodeURIComponent(text)}`;
+};
+
+// Add staff WhatsApp URL to notification outbox items so AdminPanel can open them
+const enqueueStaffAlert = (type, data) => {
+  const whatsappUrl = buildStaffWhatsAppUrl(type, data);
+  if (!Array.isArray(db.notificationOutbox)) db.notificationOutbox = [];
+  db.notificationOutbox.unshift({
+    id: `staff_alert_${Date.now()}`,
+    type: type === 'order' ? 'NEW_ORDER_ALERT' : 'NEW_BOOKING_ALERT',
+    entityId: data.id,
+    entityType: type,
+    summary: type === 'order'
+      ? `New order #${data.id} from ${data.customerName || data.customer_name} — ₹${data.total || data.total_amount}`
+      : `New booking #${data.id} by ${data.guestName || data.customer_name} — Room ${data.roomNumber || data.room_number}`,
+    whatsappUrl,
+    status: 'PENDING_STAFF_ACK',
+    createdAt: new Date().toISOString()
+  });
+  broadcastSSE('STAFF_NOTIFICATION', {
+    type: type === 'order' ? 'NEW_ORDER_ALERT' : 'NEW_BOOKING_ALERT',
+    entityId: data.id,
+    summary: db.notificationOutbox[0].summary,
+    whatsappUrl
+  });
+};
 
 // 13. Event Enquiries
 app.get('/api/events-list', (req, res) => {

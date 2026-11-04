@@ -10,6 +10,7 @@ import {
   CheckCircle2, 
   Sparkles,
   ArrowRight,
+  ArrowLeft,
   ShieldCheck,
   Camera,
   Upload,
@@ -397,19 +398,41 @@ Estimated Total: ₹${grandTotal.toLocaleString()}`;
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            aria-label="Close Booking Dialog"
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text-muted)',
-              cursor: 'pointer',
-              padding: '0.35rem'
-            }}
-          >
-            <X size={22} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <button
+              onClick={onClose}
+              aria-label="Back"
+              style={{
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid var(--border-gold)',
+                borderRadius: '6px',
+                color: 'var(--text-secondary)',
+                cursor: 'pointer',
+                padding: '0.35rem 0.65rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+                fontSize: '0.8rem',
+                fontWeight: 600
+              }}
+            >
+              <ArrowLeft size={14} />
+              <span>Back</span>
+            </button>
+            <button
+              onClick={onClose}
+              aria-label="Close Booking Dialog"
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-muted)',
+                cursor: 'pointer',
+                padding: '0.35rem'
+              }}
+            >
+              <X size={22} />
+            </button>
+          </div>
         </div>
 
         {/* Confirmed Screen */}
@@ -533,8 +556,10 @@ Estimated Total: ₹${grandTotal.toLocaleString()}`;
               <button
                 onClick={() => { setBookingConfirmed(null); onClose(); }}
                 className="btn btn-primary"
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
               >
-                Done
+                <ArrowLeft size={16} />
+                <span>Done & Return to Rooms</span>
               </button>
             </div>
           </div>

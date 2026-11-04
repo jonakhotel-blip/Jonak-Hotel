@@ -6175,7 +6175,7 @@
       "totalStays": 1,
       "totalEvents": 0,
       "totalSpend": 5998,
-      "lastVisitDate": "2026-11-04T08:21:53.188Z",
+      "lastVisitDate": "2026-11-04T09:48:09.146Z",
       "customerType": "⭐ Frequent Diner"
     },
     {
@@ -6187,7 +6187,7 @@
       "totalStays": 1,
       "totalEvents": 0,
       "totalSpend": 3998,
-      "lastVisitDate": "2026-11-04T08:21:53.188Z",
+      "lastVisitDate": "2026-11-04T09:48:09.146Z",
       "customerType": "⭐ Frequent Diner"
     },
     {
@@ -6211,7 +6211,7 @@
       "totalStays": 0,
       "totalEvents": 0,
       "totalSpend": 620,
-      "lastVisitDate": "2026-11-04T08:21:53.188Z",
+      "lastVisitDate": "2026-11-04T09:48:09.146Z",
       "customerType": "🌱 New Customer"
     },
     {
@@ -6223,11 +6223,11 @@
       "totalStays": 0,
       "totalEvents": 0,
       "totalSpend": 610,
-      "lastVisitDate": "2026-11-04T08:21:53.188Z",
+      "lastVisitDate": "2026-11-04T09:48:09.146Z",
       "customerType": "🌱 New Customer"
     }
   ],
-  "version": 1793780513238,
+  "version": 1793785689146,
   "users": [
     {
       "id": "usr_owner_001",

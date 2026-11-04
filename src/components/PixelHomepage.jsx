@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import './PixelHomepage.css';
 import { useHotel } from '../context/HotelContext';
 import { JonakImage } from './common/JonakImage';
@@ -20,7 +20,11 @@ import {
   ShieldCheck, 
   Sparkles,
   X,
-  Crown
+  Crown,
+  Lock,
+  Navigation,
+  Package,
+  ArrowLeft
 } from 'lucide-react';
 
 export function PixelHomepage({
@@ -29,7 +33,10 @@ export function PixelHomepage({
   onOpenAdmin,
   onOpenTracker
 }) {
-  const { addToCart, menu, physicalRooms, rooms } = useHotel();
+  const { addToCart, menu, physicalRooms, rooms, cart } = useHotel();
+
+  // Cart item count badge
+  const cartCount = cart ? cart.reduce((s, i) => s + (i.qty || 1), 0) : 0;
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState('');
@@ -38,6 +45,20 @@ export function PixelHomepage({
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [showFullMenuModal, setShowFullMenuModal] = useState(false);
   const [showFullRoomsModal, setShowFullRoomsModal] = useState(false);
+
+  // Global ESC key handler for all modals
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') {
+        setShowLocationModal(false);
+        setShowNotificationModal(false);
+        setShowFullMenuModal(false);
+        setShowFullRoomsModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, []);
 
   // Live filtered search results
   const searchResults = useMemo(() => {
@@ -605,8 +626,8 @@ export function PixelHomepage({
               <span className="pixel-nav-label">Offers</span>
             </button>
 
-            {/* 5. Brand area on Right */}
-            <div className="pixel-nav-brand-area" onClick={onOpenAdmin}>
+            {/* 5. Brand area on Right — also acts as Admin login trigger (discreet) */}
+            <div className="pixel-nav-brand-area" onClick={onOpenAdmin} title="Staff Login">
               <div className="pixel-brand-leaves">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M12 2C6.5 2 2 6.5 2 12C2 17.5 6.5 22 12 22C17.5 22 22 17.5 22 12C22 6.5 17.5 2 12 2ZM12 20C7.6 20 4 16.4 4 12C4 7.6 7.6 4 12 4C16.4 4 20 7.6 20 12C20 16.4 16.4 20 12 20Z" fill="none" opacity="0"/>
@@ -624,6 +645,50 @@ export function PixelHomepage({
         </nav>
 
         {/* ================================================================== */}
+        {/* FLOATING ACTION BUTTONS (Cart Badge + Track Order + Admin)         */}
+        {/* ================================================================== */}
+
+        {/* Floating Cart Badge Button */}
+        {cartCount > 0 && (
+          <button
+            type="button"
+            className="pixel-fab pixel-fab-cart"
+            onClick={onOpenCart}
+            aria-label={`View Cart (${cartCount} items)`}
+          >
+            <ShoppingBag size={20} color="#1C1C1C" />
+            <span className="pixel-fab-badge">{cartCount}</span>
+          </button>
+        )}
+
+        {/* Floating Track Order Button */}
+        {typeof onOpenTracker === 'function' && (
+          <button
+            type="button"
+            className="pixel-fab pixel-fab-track"
+            onClick={onOpenTracker}
+            aria-label="Track My Order"
+            title="Track Your Food Order"
+          >
+            <Navigation size={18} color="#FFFFFF" />
+            <span className="pixel-fab-label">Track</span>
+          </button>
+        )}
+
+        {/* Floating Admin / Staff Login Button (discreet, bottom-right) */}
+        {typeof onOpenAdmin === 'function' && (
+          <button
+            type="button"
+            className="pixel-fab pixel-fab-admin"
+            onClick={onOpenAdmin}
+            aria-label="Staff Admin Login"
+            title="Staff & Admin Login"
+          >
+            <Lock size={15} color="#D4AF37" />
+          </button>
+        )}
+
+        {/* ================================================================== */}
         {/* MODALS: Location, Notifications, Full Menu, Full Rooms             */}
         {/* ================================================================== */}
 
@@ -632,8 +697,12 @@ export function PixelHomepage({
           <div className="pixel-modal-backdrop" onClick={() => setShowLocationModal(false)}>
             <div className="pixel-modal-sheet" onClick={(e) => e.stopPropagation()}>
               <div className="pixel-modal-header">
+                <button type="button" className="pixel-modal-back-btn" onClick={() => setShowLocationModal(false)}>
+                  <ArrowLeft size={16} />
+                  <span>Back</span>
+                </button>
                 <h4>Hotel &amp; Delivery Location</h4>
-                <button type="button" onClick={() => setShowLocationModal(false)}><X size={18} /></button>
+                <button type="button" onClick={() => setShowLocationModal(false)} aria-label="Close"><X size={18} /></button>
               </div>
               <div className="pixel-modal-body">
                 <p><strong>Jonak Hotel &amp; Restaurant</strong></p>
@@ -656,8 +725,12 @@ export function PixelHomepage({
           <div className="pixel-modal-backdrop" onClick={() => setShowNotificationModal(false)}>
             <div className="pixel-modal-sheet" onClick={(e) => e.stopPropagation()}>
               <div className="pixel-modal-header">
+                <button type="button" className="pixel-modal-back-btn" onClick={() => setShowNotificationModal(false)}>
+                  <ArrowLeft size={16} />
+                  <span>Back</span>
+                </button>
                 <h4>Hotel Updates &amp; Announcements</h4>
-                <button type="button" onClick={() => setShowNotificationModal(false)}><X size={18} /></button>
+                <button type="button" onClick={() => setShowNotificationModal(false)} aria-label="Close"><X size={18} /></button>
               </div>
               <div className="pixel-modal-body">
                 <div className="pixel-notif-item">
@@ -667,17 +740,39 @@ export function PixelHomepage({
                     <p>Enjoy our Authentic Dum Biryani &amp; Luxury AC Stays in Barpeta. Free home delivery within 5 KM.</p>
                   </div>
                 </div>
+                <div className="pixel-notif-item" style={{ marginTop: '0.75rem', background: 'rgba(16,185,129,0.06)', borderRadius: '8px', padding: '0.6rem 0.75rem' }}>
+                  <Bell size={16} color="#10B981" />
+                  <div>
+                    <strong style={{ color: '#10B981' }}>New: Live Order Tracking</strong>
+                    <p>Track your food delivery in real-time on a live map!</p>
+                  </div>
+                </div>
                 {onOpenTracker && (
                   <button 
                     type="button" 
                     className="pixel-modal-btn" 
-                    style={{ marginTop: '1rem', background: '#003838', color: '#FFFFFF' }}
+                    style={{ marginTop: '1rem', background: '#10B981', color: '#fff', display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }}
                     onClick={() => {
                       setShowNotificationModal(false);
                       onOpenTracker();
                     }}
                   >
+                    <Navigation size={16} />
                     Track Live Food Delivery
+                  </button>
+                )}
+                {onOpenAdmin && (
+                  <button 
+                    type="button" 
+                    className="pixel-modal-btn" 
+                    style={{ marginTop: '0.5rem', background: '#003838', color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }}
+                    onClick={() => {
+                      setShowNotificationModal(false);
+                      onOpenAdmin();
+                    }}
+                  >
+                    <Lock size={15} />
+                    Staff / Admin Login
                   </button>
                 )}
               </div>
@@ -690,8 +785,12 @@ export function PixelHomepage({
           <div className="pixel-modal-backdrop" onClick={() => setShowFullMenuModal(false)}>
             <div className="pixel-modal-sheet pixel-full-sheet" onClick={(e) => e.stopPropagation()}>
               <div className="pixel-modal-header">
+                <button type="button" className="pixel-modal-back-btn" onClick={() => setShowFullMenuModal(false)}>
+                  <ArrowLeft size={16} />
+                  <span>Back</span>
+                </button>
                 <h4>All Popular Food Items ({menu ? menu.length : 82})</h4>
-                <button type="button" onClick={() => setShowFullMenuModal(false)}><X size={18} /></button>
+                <button type="button" onClick={() => setShowFullMenuModal(false)} aria-label="Close"><X size={18} /></button>
               </div>
               <div className="pixel-modal-scroll-body">
                 <div className="pixel-menu-catalog-grid">
@@ -729,8 +828,12 @@ export function PixelHomepage({
           <div className="pixel-modal-backdrop" onClick={() => setShowFullRoomsModal(false)}>
             <div className="pixel-modal-sheet pixel-full-sheet" onClick={(e) => e.stopPropagation()}>
               <div className="pixel-modal-header">
+                <button type="button" className="pixel-modal-back-btn" onClick={() => setShowFullRoomsModal(false)}>
+                  <ArrowLeft size={16} />
+                  <span>Back</span>
+                </button>
                 <h4>Available Rooms &amp; Suites (Rooms 101–304)</h4>
-                <button type="button" onClick={() => setShowFullRoomsModal(false)}><X size={18} /></button>
+                <button type="button" onClick={() => setShowFullRoomsModal(false)} aria-label="Close"><X size={18} /></button>
               </div>
               <div className="pixel-modal-scroll-body">
                 <div className="pixel-rooms-catalog-grid">

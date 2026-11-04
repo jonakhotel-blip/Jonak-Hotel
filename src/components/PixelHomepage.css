@@ -896,6 +896,25 @@
   align-items: center;
   padding-bottom: 0.75rem;
   border-bottom: 1px solid #E5E7EB;
+  gap: 0.5rem;
+}
+
+.pixel-modal-back-btn {
+  background: rgba(0, 56, 56, 0.08) !important;
+  border: 1px solid rgba(0, 56, 56, 0.2) !important;
+  border-radius: 6px;
+  color: var(--pixel-teal) !important;
+  font-weight: 700;
+  font-size: 0.78rem;
+  display: flex !important;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.35rem 0.65rem !important;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.pixel-modal-back-btn:hover {
+  background: rgba(0, 56, 56, 0.15) !important;
 }
 
 .pixel-modal-header h4 {
@@ -1029,3 +1048,104 @@
   }
 }
 
+
+/* ============================================================ */
+/* FLOATING ACTION BUTTONS (FAB)                                */
+/* ============================================================ */
+
+/* Base FAB */
+.pixel-fab {
+  position: fixed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  z-index: 9900;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  font-family: var(--font-primary);
+}
+.pixel-fab:hover {
+  transform: translateY(-2px) scale(1.07);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+}
+.pixel-fab:active {
+  transform: scale(0.96);
+}
+
+/* Cart FAB — golden, bottom-right above nav */
+.pixel-fab-cart {
+  bottom: 90px;
+  right: 18px;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #F5C542, #E8A800);
+  animation: jonakFabPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.pixel-fab-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #EF4444;
+  color: #FFFFFF;
+  font-size: 0.65rem;
+  font-weight: 800;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: 2px solid #070B14;
+}
+
+/* Track Order FAB — teal, bottom-left above nav */
+.pixel-fab-track {
+  bottom: 90px;
+  left: 18px;
+  gap: 0.3rem;
+  padding: 0.55rem 0.9rem;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #10B981, #047857);
+  color: #FFFFFF;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.pixel-fab-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* Admin FAB — tiny dark teal lock, bottom-right lowest (above track, below cart) */
+.pixel-fab-admin {
+  bottom: 152px;
+  right: 18px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(0, 56, 56, 0.9);
+  border: 1.5px solid rgba(212, 175, 55, 0.4);
+}
+
+@keyframes jonakFabPop {
+  0%   { transform: scale(0); opacity: 0; }
+  80%  { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+/* Notification item styles */
+.pixel-notif-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.5rem 0;
+}
+.pixel-notif-item p {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin-top: 0.1rem;
+}

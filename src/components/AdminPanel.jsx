@@ -272,6 +272,44 @@ export const AdminPanel = ({ onExitAdmin }) => {
     }
   }, [activeTab, fetchFinancialReport, fetchNotificationLogs]);
 
+  // 🔔 Staff Real-Time Notification Polling (every 25 seconds)
+  const [staffAlerts, setStaffAlerts] = useState([]);
+  const [staffAlertBadge, setStaffAlertBadge] = useState(0);
+  const [lastPollTime, setLastPollTime] = useState(() => new Date().toISOString());
+  const [showStaffAlertPanel, setShowStaffAlertPanel] = useState(false);
+
+  useEffect(() => {
+    if (!isAdminAuthenticated) return;
+    const poll = async () => {
+      try {
+        const BASE = typeof window !== 'undefined' && window.location.hostname !== 'localhost'
+          ? 'https://jonak-hotel.onrender.com'
+          : 'http://localhost:5000';
+        const res = await fetch(`${BASE}/api/notifications/staff?since=${encodeURIComponent(lastPollTime)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.notifications && data.notifications.length > 0) {
+          setStaffAlerts(prev => {
+            const existingIds = new Set(prev.map(n => n.id));
+            const newOnes = data.notifications.filter(n => !existingIds.has(n.id));
+            if (newOnes.length > 0) {
+              setStaffAlertBadge(b => b + newOnes.length);
+              // Audible alert for new notifications
+              if (typeof playNotificationChime === 'function') {
+                try { playNotificationChime(); } catch {}
+              }
+            }
+            return [...newOnes, ...prev].slice(0, 50);
+          });
+          setLastPollTime(data.serverTime || new Date().toISOString());
+        }
+      } catch {}
+    };
+    poll(); // immediate first poll
+    const interval = setInterval(poll, 25000);
+    return () => clearInterval(interval);
+  }, [isAdminAuthenticated, lastPollTime]);
+
   // Menu Search & Filter
   const [dishSearch, setDishSearch] = useState('');
   const [dishCategoryFilter, setDishCategoryFilter] = useState('ALL');
@@ -1525,6 +1563,77 @@ export const AdminPanel = ({ onExitAdmin }) => {
               <Bell size={14} color="var(--gold-primary)" />
               <span className="hide-on-mobile">Chime</span>
             </button>
+
+            {/* 🔔 Staff Real-Time Alert Bell */}
+            <button
+              onClick={() => { setShowStaffAlertPanel(p => !p); setStaffAlertBadge(0); }}
+              className="btn btn-secondary btn-sm"
+              title="New Orders & Bookings Alerts"
+              style={{ padding: '0.45rem 0.65rem', fontSize: '0.78rem', position: 'relative' }}
+            >
+              <Bell size={14} color={staffAlertBadge > 0 ? '#EF4444' : 'var(--gold-primary)'} />
+              <span className="hide-on-mobile">Alerts</span>
+              {staffAlertBadge > 0 && (
+                <span style={{
+                  position: 'absolute', top: '-6px', right: '-6px',
+                  background: '#EF4444', color: '#fff', fontSize: '0.6rem',
+                  fontWeight: 800, minWidth: '18px', height: '18px',
+                  borderRadius: '9px', display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', padding: '0 3px',
+                  border: '2px solid #070B14'
+                }}>
+                  {staffAlertBadge > 9 ? '9+' : staffAlertBadge}
+                </span>
+              )}
+            </button>
+
+            {/* Staff Alert Dropdown Panel */}
+            {showStaffAlertPanel && (
+              <div style={{
+                position: 'absolute', top: '100%', right: '1rem', marginTop: '0.5rem',
+                width: '340px', maxHeight: '420px', overflowY: 'auto',
+                background: '#0F1623', border: '1px solid var(--border-color)',
+                borderRadius: '10px', boxShadow: '0 20px 60px rgba(0,0,0,0.7)',
+                zIndex: 99999, padding: '0.75rem'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+                  <span style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '0.9rem' }}>🔔 Staff Notifications</span>
+                  <button onClick={() => setShowStaffAlertPanel(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>✕</button>
+                </div>
+                {staffAlerts.length === 0 ? (
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', textAlign: 'center', padding: '1rem' }}>No new alerts. Orders and bookings will appear here.</p>
+                ) : staffAlerts.map(alert => (
+                  <div key={alert.id} style={{
+                    background: alert.type === 'NEW_ORDER_ALERT' ? 'rgba(16,185,129,0.08)' : 'rgba(59,130,246,0.08)',
+                    border: `1px solid ${alert.type === 'NEW_ORDER_ALERT' ? 'rgba(16,185,129,0.25)' : 'rgba(59,130,246,0.25)'}`,
+                    borderRadius: '7px', padding: '0.65rem 0.75rem', marginBottom: '0.5rem'
+                  }}>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.3rem' }}>
+                      {alert.type === 'NEW_ORDER_ALERT' ? '🍽️ New Food Order' : '🏨 New Room Booking'}
+                    </div>
+                    <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>{alert.summary}</div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
+                      {new Date(alert.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
+                    </div>
+                    {alert.whatsappUrl && (
+                      <a
+                        href={alert.whatsappUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                          background: '#25D366', color: '#fff', padding: '0.3rem 0.7rem',
+                          borderRadius: '5px', fontSize: '0.75rem', fontWeight: 700,
+                          textDecoration: 'none'
+                        }}
+                      >
+                        📲 Open in WhatsApp
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
 
             <button
               onClick={onExitAdmin}

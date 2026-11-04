@@ -20,10 +20,50 @@ import {
 export const OrderTrackerModal = ({ isOpen, onClose, targetOrderId = null }) => {
   const { orders, hotelInfo, updateOrderLocation, showToast } = useHotel();
 
+  // Track by phone or ID search
+  const [searchInput, setSearchInput] = useState('');
+  const [searchedOrderId, setSearchedOrderId] = useState(targetOrderId);
+
   // Find target order or latest active delivery order
-  const activeOrder = orders.find(o => o.id === targetOrderId) || 
+  const resolvedOrderId = searchedOrderId || targetOrderId;
+  const activeOrder = orders.find(o => o.id === resolvedOrderId) || 
                       orders.find(o => o.orderType === 'DELIVERY' || o.deliveryAddress) || 
                       orders[0];
+
+  // ESC key + body overflow
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isOpen) onClose();
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [isOpen, onClose]);
+
+  // Handle search by order ID or phone
+  const handleSearch = () => {
+    const q = searchInput.trim();
+    if (!q) return;
+    // Search by order ID
+    const byId = orders.find(o => o.id?.toLowerCase() === q.toLowerCase());
+    // Search by phone
+    const byPhone = orders.find(o => (o.phone || o.customerPhone || o.customer_phone || '')
+      .replace(/\D/g, '').endsWith(q.replace(/\D/g, '')));
+    if (byId) {
+      setSearchedOrderId(byId.id);
+      showToast(`📦 Found order #${byId.id}`, 'success');
+    } else if (byPhone) {
+      setSearchedOrderId(byPhone.id);
+      showToast(`📦 Found order #${byPhone.id} for this phone`, 'success');
+    } else {
+      showToast('No order found. Try your Order ID (e.g. JNK-1234) or phone number.', 'danger');
+    }
+  };
 
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -247,7 +287,68 @@ export const OrderTrackerModal = ({ isOpen, onClose, targetOrderId = null }) => 
     }
   };
 
-  if (!isOpen || !activeOrder) return null;
+  if (!isOpen) return null;
+
+  // No order found — show search UI
+  if (!activeOrder) return (
+    <div style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      backgroundColor: 'rgba(7, 11, 20, 0.88)', backdropFilter: 'blur(10px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      zIndex: 100000, padding: '1rem'
+    }}
+    onClick={onClose}
+    >
+      <div style={{
+        background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+        borderRadius: 'var(--radius-lg)', width: '100%', maxWidth: '480px',
+        padding: '2rem', textAlign: 'center'
+      }}
+      onClick={e => e.stopPropagation()}
+      >
+        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📦</div>
+        <h3 style={{ color: '#FFFFFF', marginBottom: '0.5rem' }}>Track Your Order</h3>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+          Enter your Order ID (e.g. JNK-1234) or your phone number to track your food delivery.
+        </p>
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+          <input
+            type="text"
+            value={searchInput}
+            onChange={e => setSearchInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') handleSearch(); }}
+            placeholder="Order ID or Phone number"
+            style={{
+              flex: 1, padding: '0.75rem 1rem', borderRadius: '8px',
+              border: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.05)',
+              color: '#FFFFFF', fontSize: '0.9rem', outline: 'none'
+            }}
+          />
+          <button
+            onClick={handleSearch}
+            style={{
+              padding: '0.75rem 1.2rem', borderRadius: '8px',
+              background: 'var(--gold-primary)', color: '#1C1C1C',
+              border: 'none', fontWeight: 700, cursor: 'pointer'
+            }}
+          >
+            Track
+          </button>
+        </div>
+        <button
+          onClick={onClose}
+          style={{
+            padding: '0.6rem 1.5rem', borderRadius: '8px',
+            background: 'rgba(255,255,255,0.08)', color: 'var(--text-secondary)',
+            border: '1px solid var(--border-color)', fontWeight: 600, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: '0.4rem', margin: '0 auto'
+          }}
+        >
+          ← Back to Menu
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div style={{
@@ -263,7 +364,9 @@ export const OrderTrackerModal = ({ isOpen, onClose, targetOrderId = null }) => 
       justifyContent: 'center',
       zIndex: 100000,
       padding: '1rem'
-    }}>
+    }}
+    onClick={onClose}
+    >
       <div style={{
         background: 'var(--bg-card)',
         border: '1px solid var(--border-color)',
@@ -274,7 +377,9 @@ export const OrderTrackerModal = ({ isOpen, onClose, targetOrderId = null }) => 
         overflowY: 'auto',
         boxShadow: 'var(--shadow-premium)',
         position: 'relative'
-      }}>
+      }}
+      onClick={e => e.stopPropagation()}
+      >
 
         {/* Header */}
         <div style={{
@@ -283,9 +388,31 @@ export const OrderTrackerModal = ({ isOpen, onClose, targetOrderId = null }) => 
           alignItems: 'center',
           padding: '1.25rem 1.5rem',
           borderBottom: '1px solid var(--border-color)',
-          background: 'rgba(212, 175, 55, 0.05)'
+          background: 'rgba(212, 175, 55, 0.05)',
+          gap: '1rem'
         }}>
-          <div>
+          {/* Back button */}
+          <button
+            onClick={onClose}
+            style={{
+              background: 'rgba(255,255,255,0.08)',
+              border: '1px solid var(--border-color)',
+              color: 'var(--text-secondary)',
+              cursor: 'pointer',
+              padding: '0.4rem 0.75rem',
+              borderRadius: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.3rem',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              flexShrink: 0
+            }}
+          >
+            <RotateCcw size={14} />
+            Back
+          </button>
+          <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
               <span style={{
                 background: '#10B981',
@@ -310,6 +437,32 @@ export const OrderTrackerModal = ({ isOpen, onClose, targetOrderId = null }) => 
             </p>
           </div>
 
+          {/* Search box to switch order */}
+          <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+            <input
+              type="text"
+              value={searchInput}
+              onChange={e => setSearchInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleSearch(); }}
+              placeholder="Order ID / Phone"
+              style={{
+                padding: '0.4rem 0.65rem', borderRadius: '6px',
+                border: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.05)',
+                color: '#FFFFFF', fontSize: '0.78rem', outline: 'none', width: '140px'
+              }}
+            />
+            <button
+              onClick={handleSearch}
+              style={{
+                padding: '0.4rem 0.7rem', borderRadius: '6px',
+                background: 'var(--gold-primary)', color: '#1C1C1C',
+                border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '0.78rem'
+              }}
+            >
+              🔍
+            </button>
+          </div>
+
           <button
             onClick={onClose}
             style={{
@@ -318,7 +471,8 @@ export const OrderTrackerModal = ({ isOpen, onClose, targetOrderId = null }) => 
               color: 'var(--text-muted)',
               cursor: 'pointer',
               padding: '0.4rem',
-              borderRadius: '50%'
+              borderRadius: '50%',
+              flexShrink: 0
             }}
           >
             <X size={22} />
