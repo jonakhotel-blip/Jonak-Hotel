@@ -29,7 +29,16 @@ import {
   ArrowLeft,
   HelpCircle,
   Sparkles,
-  ShoppingBag
+  ShoppingBag,
+  Power,
+  DollarSign,
+  Radio,
+  AlertTriangle,
+  ExternalLink,
+  Send,
+  User,
+  Eye,
+  Menu
 } from 'lucide-react';
 
 // Jonak Hotel Coordinates (BH Road, near NRL Petrol Pump, Donakuchi, Barpeta)
@@ -66,54 +75,73 @@ function calculateBearing(startLat, startLng, destLat, destLng) {
   return (brng + 360) % 360;
 }
 
+// Initial Menu Items for Customer Quick Order
+const MENU_ITEMS_CATALOG = [
+  { id: 'item-1', name: 'Jonak Special Dum Biryani', price: 350, category: 'Biryani', isVeg: false, desc: 'Aromatic basmati rice cooked with tender marinated chicken & saffron' },
+  { id: 'item-2', name: 'Assamese Deluxe Thali', price: 280, category: 'Local Platters', isVeg: false, desc: 'Steamed Joha rice, dal, seasonal labra, duck curry & pitika' },
+  { id: 'item-3', name: 'Butter Chicken Masala', price: 320, category: 'Indian Main', isVeg: false, desc: 'Tandoori roasted chicken tossed in creamy rich tomato gravy' },
+  { id: 'item-4', name: 'Paneer Butter Masala', price: 260, category: 'Indian Main', isVeg: true, desc: 'Cottage cheese simmered in butter silk tomato gravy' },
+  { id: 'item-5', name: 'Butter Naan (2 pcs)', price: 80, category: 'Indian Main', isVeg: true, desc: 'Fresh tandoor-baked leavened flatbread brushed with amul butter' },
+  { id: 'item-6', name: 'Chilli Chicken Dry', price: 240, category: 'Starters', isVeg: false, desc: 'Crispy diced chicken tossed with capsicum, green chilies & soy glaze' }
+];
+
+// Active Nearby Delivery Partners for Kitchen Dispatch
+const NEARBY_RIDERS = [
+  { id: 'RDR-01', name: 'Rahul Sharma', rating: 4.9, vehicle: 'Hero Splendor (AS-15-H-4821)', battery: '92%', distanceKm: 0.8, status: 'Active (On Duty)' },
+  { id: 'RDR-02', name: 'Monojit Roy', rating: 4.8, vehicle: 'Honda Activa (AS-15-B-1286)', battery: '78%', distanceKm: 1.4, status: 'Available' },
+  { id: 'RDR-03', name: 'Bikash Das', rating: 4.9, vehicle: 'Bajaj Pulsar (AS-15-K-9021)', battery: '85%', distanceKm: 2.1, status: 'Available' }
+];
+
 export const OrderTrackerModal = ({ isOpen, onClose, targetOrderId = null }) => {
   const { orders, hotelInfo, showToast } = useHotel();
 
-  // Selected or active order
-  const activeOrder = useMemo(() => {
-    if (targetOrderId) {
-      const found = orders?.find(o => o.id === targetOrderId);
-      if (found) return found;
-    }
-    return orders?.find(o => o.orderType === 'DELIVERY' || o.deliveryAddress) || orders?.[0] || {
-      id: 'JNK-84920',
-      customerName: 'Guest Customer',
-      customerPhone: '9678582286',
-      deliveryAddress: 'BH Road, Barpeta Town (Near Satra)',
-      items: [
-        { name: 'Jonak Special Dum Biryani', qty: 1, price: 350, isVeg: false },
-        { name: 'Butter Naan', qty: 2, price: 40, isVeg: true },
-        { name: 'Jeera Rice', qty: 1, price: 140, isVeg: true }
-      ],
-      total: 570,
-      subtotal: 570,
-      deliveryFee: 0,
-      paymentMethod: 'Paytm UPI (paytm.s1i7is2@pty)'
-    };
-  }, [orders, targetOrderId]);
+  // --------------------------------------------------------------------------
+  // TOP SWITCHER: 'CUSTOMER' | 'RIDER' | 'KITCHEN'
+  // --------------------------------------------------------------------------
+  const [activeSuiteRole, setActiveSuiteRole] = useState('CUSTOMER');
+
+  // Customer sub-tab: 'TRACK' | 'MENU_ORDER'
+  const [customerSubTab, setCustomerSubTab] = useState('TRACK');
+  const [orderTypeSelection, setOrderTypeSelection] = useState('CITY_DELIVERY'); // 'CITY_DELIVERY' | 'ROOM_DELIVERY'
+  const [roomNumberInput, setRoomNumberInput] = useState('101');
+  const [cartItems, setCartItems] = useState([
+    { id: 'item-1', name: 'Jonak Special Dum Biryani', price: 350, qty: 1, isVeg: false },
+    { id: 'item-5', name: 'Butter Naan (2 pcs)', price: 80, qty: 2, isVeg: true }
+  ]);
 
   // --------------------------------------------------------------------------
-  // 4-STAGE RECURRING LOOPING STATE MACHINE
+  // CENTRAL SYNCHRONIZED ORDER & DEMO ENGINE STATE
   // --------------------------------------------------------------------------
-  // Phase 1: "Order Confirmed & Preparing Food" (8s)
-  // Phase 2: "Food Ready & Driver Assigned" (8s)
-  // Phase 3: "Out for Delivery & Live Movement" (18s)
-  // Phase 4: "Arrived / Order Delivered" (8s)
-  // Auto-Reset: wait 5s and loop back to Phase 1
-  const [currentPhase, setCurrentPhase] = useState(1);
+  // Operational Status Lifecycle:
+  // 1: 'PLACED' (Customer placed order -> Kitchen gets alert)
+  // 2: 'PREPARING' (Kitchen cooking -> Rider gets radar alert)
+  // 3: 'READY_FOR_PICKUP' (Kitchen packed -> Rider arrives at Jonak Hotel)
+  // 4: 'OUT_FOR_DELIVERY' (Rider departs -> Live GPS motion on map)
+  // 5: 'ARRIVED_DOORSTEP' (Rider reaches doorstep -> OTP verification)
+  // 6: 'DELIVERED' (OTP submitted -> Complete & Celebration)
+  const [lifecyclePhase, setLifecyclePhase] = useState(4); // Default to live tracking phase
   const [isAutoLooping, setIsAutoLooping] = useState(true);
-  const [phaseSecondsLeft, setPhaseSecondsLeft] = useState(8);
-  const [dynamicEtaMinutes, setDynamicEtaMinutes] = useState(30);
 
-  // Rider position interpolation along route
-  const [riderWaypointIndex, setRiderWaypointIndex] = useState(0);
+  // Dynamic ETA & Countdown
+  const [etaMinutes, setEtaMinutes] = useState(14);
+  const [riderWaypointIndex, setRiderWaypointIndex] = useState(4);
   const [riderBearing, setRiderBearing] = useState(135);
 
-  // Interactive UI states
-  const [isAccordionOpen, setIsAccordionOpen] = useState(false);
-  const [selectedTip, setSelectedTip] = useState(30);
+  // Rider specific state
+  const [isRiderOnline, setIsRiderOnline] = useState(true);
+  const [radarSecondsRemaining, setRadarSecondsRemaining] = useState(30);
+  const [showRiderOtpModal, setShowRiderOtpModal] = useState(false);
+  const [riderOtpInput, setRiderOtpInput] = useState('');
+  const [otpError, setOtpError] = useState('');
+
+  // Customer verification OTP
+  const deliveryOtp = '5914';
+
+  // Customer interactive toggles
   const [leaveAtDoor, setLeaveAtDoor] = useState(false);
+  const [selectedTip, setSelectedTip] = useState(30);
   const [copiedOtp, setCopiedOtp] = useState(false);
+  const [isAccordionOpen, setIsAccordionOpen] = useState(true);
 
   // Map references
   const mapContainerRef = useRef(null);
@@ -122,61 +150,68 @@ export const OrderTrackerModal = ({ isOpen, onClose, targetOrderId = null }) => 
   const routePolylineRef = useRef(null);
   const traversedPolylineRef = useRef(null);
 
-  // Delivery OTP code
-  const deliveryOtp = useMemo(() => {
-    return '4821';
-  }, []);
-
-  // Delivery captain info
-  const captain = useMemo(() => ({
-    name: 'Rahul Sharma',
-    rating: 4.9,
-    trips: '840+ deliveries',
-    phone: '+91 88760 55667',
-    vehicle: 'Hero Splendor • AS-15-H-4821',
-    vaccinated: true
-  }), []);
+  // Selected active order
+  const activeOrder = useMemo(() => {
+    return {
+      id: targetOrderId || 'JNK-84920',
+      customerName: 'Shahidul Guest',
+      phone: '9678582286',
+      deliveryAddress: orderTypeSelection === 'ROOM_DELIVERY'
+        ? `Room ${roomNumberInput} • Jonak Hotel & Restaurant`
+        : 'BH Road, near Satra, Barpeta Town, Assam 781314',
+      items: cartItems,
+      subtotal: cartItems.reduce((acc, i) => acc + i.price * i.qty, 0),
+      deliveryFee: 0,
+      total: cartItems.reduce((acc, i) => acc + i.price * i.qty, 0) + selectedTip,
+      paymentMethod: 'Paytm UPI (paytm.s1i7is2@pty)',
+      createdAt: '10:30 AM'
+    };
+  }, [targetOrderId, orderTypeSelection, roomNumberInput, cartItems, selectedTip]);
 
   // --------------------------------------------------------------------------
-  // STATE MACHINE TIMER & DYNAMIC TRANSITIONS
+  // CONTINUOUS MULTI-SCREEN DEMO LOOP ENGINE
   // --------------------------------------------------------------------------
   useEffect(() => {
     if (!isOpen || !isAutoLooping) return;
 
     let timer;
 
-    if (currentPhase === 1) {
-      setDynamicEtaMinutes(32);
+    if (lifecyclePhase === 1) {
+      // Phase 1: Customer Placed (6s)
+      setEtaMinutes(35);
       setRiderWaypointIndex(0);
-      setPhaseSecondsLeft(8);
-
       timer = setTimeout(() => {
-        setCurrentPhase(2);
-      }, 8000);
+        setLifecyclePhase(2);
+      }, 7000);
 
-    } else if (currentPhase === 2) {
-      setDynamicEtaMinutes(22);
+    } else if (lifecyclePhase === 2) {
+      // Phase 2: Kitchen Preparing & Rider receives radar alert (7s)
+      setEtaMinutes(25);
       setRiderWaypointIndex(0);
-      setPhaseSecondsLeft(8);
-
+      setRadarSecondsRemaining(30);
       timer = setTimeout(() => {
-        setCurrentPhase(3);
-      }, 8000);
+        setLifecyclePhase(3);
+      }, 7000);
 
-    } else if (currentPhase === 3) {
-      setPhaseSecondsLeft(18);
+    } else if (lifecyclePhase === 3) {
+      // Phase 3: Food Ready & Rider arrived at Jonak Hotel (6s)
+      setEtaMinutes(20);
+      setRiderWaypointIndex(0);
+      timer = setTimeout(() => {
+        setLifecyclePhase(4);
+      }, 6000);
 
-      // Animate rider along the waypoints over 18 seconds
+    } else if (lifecyclePhase === 4) {
+      // Phase 4: Out for Delivery & Live Movement (18s)
       let step = 0;
       const stepInterval = setInterval(() => {
         step += 1;
         if (step < ROUTE_WAYPOINTS.length) {
           setRiderWaypointIndex(step);
-          // Decrease ETA dynamically from 15 mins to 1 min
           const remainingMinutes = Math.max(1, Math.round(15 - (step / ROUTE_WAYPOINTS.length) * 14));
-          setDynamicEtaMinutes(remainingMinutes);
+          setEtaMinutes(remainingMinutes);
 
-          // Calculate bearing to next point
+          // Calculate directional angle
           const prev = ROUTE_WAYPOINTS[step - 1];
           const curr = ROUTE_WAYPOINTS[step];
           const b = calculateBearing(prev[0], prev[1], curr[0], curr[1]);
@@ -186,7 +221,7 @@ export const OrderTrackerModal = ({ isOpen, onClose, targetOrderId = null }) => 
 
       timer = setTimeout(() => {
         clearInterval(stepInterval);
-        setCurrentPhase(4);
+        setLifecyclePhase(5);
       }, 18000);
 
       return () => {
@@ -194,33 +229,39 @@ export const OrderTrackerModal = ({ isOpen, onClose, targetOrderId = null }) => 
         clearTimeout(timer);
       };
 
-    } else if (currentPhase === 4) {
-      setDynamicEtaMinutes(0);
+    } else if (lifecyclePhase === 5) {
+      // Phase 5: Arrived at Doorstep (6s)
+      setEtaMinutes(1);
       setRiderWaypointIndex(ROUTE_WAYPOINTS.length - 1);
-      setPhaseSecondsLeft(8);
+      timer = setTimeout(() => {
+        setLifecyclePhase(6);
+      }, 6000);
 
-      // Trigger celebration confetti
+    } else if (lifecyclePhase === 6) {
+      // Phase 6: Delivered & Celebration (6s) -> Reset back to Phase 1
+      setEtaMinutes(0);
+      setRiderWaypointIndex(ROUTE_WAYPOINTS.length - 1);
+
       try {
         confetti({
-          particleCount: 50,
-          spread: 80,
-          origin: { y: 0.5 }
+          particleCount: 60,
+          spread: 90,
+          origin: { y: 0.55 }
         });
       } catch {}
 
-      // Wait 8s in Delivered phase, then 5s fade & reset loop back to Phase 1
       timer = setTimeout(() => {
         if (typeof showToast === 'function') {
-          showToast('🔄 Demo Cycle: Restarting live order journey from Phase 1', 'info');
+          showToast('🔄 Demo Engine: Resetting cycle to Phase 1 (Customer Order Placed)', 'info');
         }
-        setCurrentPhase(1);
-      }, 13000);
+        setLifecyclePhase(1);
+      }, 8000);
     }
 
     return () => clearTimeout(timer);
-  }, [isOpen, currentPhase, isAutoLooping, showToast]);
+  }, [isOpen, lifecyclePhase, isAutoLooping, showToast]);
 
-  // Global ESC key listener & body scroll lock
+  // Global ESC Key Listener & Body Scroll Lock
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isOpen) onClose();
@@ -241,11 +282,10 @@ export const OrderTrackerModal = ({ isOpen, onClose, targetOrderId = null }) => 
   const initMap = useCallback(() => {
     if (!mapContainerRef.current) return;
     if (!window.L) {
-      console.warn('Leaflet window.L not ready yet.');
+      console.warn('Leaflet library is loading...');
       return;
     }
 
-    // Clean up existing map instance
     if (mapInstanceRef.current) {
       mapInstanceRef.current.remove();
       mapInstanceRef.current = null;
@@ -265,13 +305,13 @@ export const OrderTrackerModal = ({ isOpen, onClose, targetOrderId = null }) => 
       // Add Zoom control bottom right
       L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-      // High-performance OpenStreetMap CartoDB Dark/Voyager tiles
+      // Voyager / CartoDB tiles
       L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         maxZoom: 19,
         subdomains: 'abcd'
       }).addTo(map);
 
-      // 1. Restaurant Marker (Custom Gold & Teal Crest with Radar Pulse)
+      // 1. Restaurant Marker (Jonak Hotel Hub)
       const restaurantIcon = L.divIcon({
         className: 'custom-restaurant-icon-wrapper',
         html: `
@@ -298,7 +338,7 @@ export const OrderTrackerModal = ({ isOpen, onClose, targetOrderId = null }) => 
         dashArray: '5, 8'
       }).addTo(map);
 
-      // 3. Customer Destination Marker (Home Icon with Radar Pulse)
+      // 3. Customer Destination Marker
       const destIcon = L.divIcon({
         className: 'custom-dest-icon-wrapper',
         html: `
@@ -313,9 +353,9 @@ export const OrderTrackerModal = ({ isOpen, onClose, targetOrderId = null }) => 
 
       L.marker(DESTINATION_COORDS, { icon: destIcon })
         .addTo(map)
-        .bindPopup(`<strong>📍 Your Delivery Address</strong><br/>${activeOrder?.deliveryAddress || 'Barpeta Town'}`);
+        .bindPopup(`<strong>📍 Customer Delivery Point</strong><br/>${activeOrder?.deliveryAddress}`);
 
-      // 4. Base Route Polyline (Gold dashed guide)
+      // 4. Base Route Polyline
       const baseRoute = L.polyline(ROUTE_WAYPOINTS, {
         color: '#D4AF37',
         weight: 4,
@@ -324,7 +364,7 @@ export const OrderTrackerModal = ({ isOpen, onClose, targetOrderId = null }) => 
       }).addTo(map);
       routePolylineRef.current = baseRoute;
 
-      // 5. Dynamic Traversed Polyline (Bright Emerald Green)
+      // 5. Dynamic Traversed Polyline
       const traversed = L.polyline([RESTAURANT_COORDS], {
         color: '#10B981',
         weight: 5,
@@ -332,8 +372,8 @@ export const OrderTrackerModal = ({ isOpen, onClose, targetOrderId = null }) => 
       }).addTo(map);
       traversedPolylineRef.current = traversed;
 
-      // 6. Delivery Rider Marker (Custom 2-Wheeler Bike Icon with Bearing Rotation)
-      const initialPos = ROUTE_WAYPOINTS[0];
+      // 6. Delivery Rider Marker
+      const initialPos = ROUTE_WAYPOINTS[riderWaypointIndex] || ROUTE_WAYPOINTS[0];
       const bikeIcon = L.divIcon({
         className: 'custom-bike-icon-wrapper',
         html: `
@@ -346,13 +386,12 @@ export const OrderTrackerModal = ({ isOpen, onClose, targetOrderId = null }) => 
       });
 
       const riderMarker = L.marker(initialPos, { icon: bikeIcon, zIndexOffset: 1000 }).addTo(map);
-      riderMarker.bindPopup(`<strong>🛵 Rahul Sharma</strong><br/>Speed: 28 km/h • Hero Splendor`);
+      riderMarker.bindPopup(`<strong>🛵 Rahul Sharma</strong><br/>Hero Splendor (AS-15-H-4821)`);
       riderMarkerRef.current = riderMarker;
 
-      // Fit bounds to display both points nicely
       map.fitBounds(baseRoute.getBounds(), { padding: [50, 50] });
 
-      // Invalidate size across multiple render passes to prevent blank tiles on Safari/Mobile Chrome
+      // Invalidate size across multiple passes to guarantee 0 blank screens on iOS Safari/Chrome Mobile
       [100, 300, 600, 1000].forEach(delay => {
         setTimeout(() => {
           if (mapInstanceRef.current) {
@@ -362,22 +401,21 @@ export const OrderTrackerModal = ({ isOpen, onClose, targetOrderId = null }) => 
       });
 
     } catch (err) {
-      console.error('Error initializing live tracking Leaflet map:', err);
+      console.error('Error initializing Leaflet map:', err);
     }
-  }, [activeOrder?.deliveryAddress, riderBearing]);
+  }, [activeOrder?.deliveryAddress, riderBearing, riderWaypointIndex]);
 
-  // Mount map when modal opens
+  // Mount/Re-mount map whenever view opens or active role switches
   useEffect(() => {
-    if (isOpen) {
-      // Small timeout ensures DOM elements have rendered explicit dimensions
+    if (isOpen && (activeSuiteRole === 'CUSTOMER' || activeSuiteRole === 'RIDER')) {
       const timer = setTimeout(() => {
         initMap();
-      }, 80);
+      }, 100);
       return () => clearTimeout(timer);
     }
-  }, [isOpen, initMap]);
+  }, [isOpen, activeSuiteRole, initMap]);
 
-  // Handle window resize for map
+  // Handle window resize
   useEffect(() => {
     const handleResize = () => {
       if (mapInstanceRef.current) {
@@ -388,38 +426,25 @@ export const OrderTrackerModal = ({ isOpen, onClose, targetOrderId = null }) => 
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Recenter map bounds on demand
-  const handleRecenter = () => {
-    if (mapInstanceRef.current && routePolylineRef.current) {
-      mapInstanceRef.current.fitBounds(routePolylineRef.current.getBounds(), { padding: [50, 50] });
-      mapInstanceRef.current.invalidateSize();
-      if (typeof showToast === 'function') {
-        showToast('📍 Route view centered', 'info');
-      }
-    }
-  };
-
-  // Update rider position and traversed polyline on map as waypoint changes
+  // Update bike position on map
   useEffect(() => {
     if (!riderMarkerRef.current || !mapInstanceRef.current) return;
 
     const currentCoord = ROUTE_WAYPOINTS[riderWaypointIndex] || ROUTE_WAYPOINTS[0];
     riderMarkerRef.current.setLatLng(currentCoord);
 
-    // Update bearing rotation
     const bikeInnerEl = document.getElementById('jonak-bike-marker-inner');
     if (bikeInnerEl) {
       bikeInnerEl.style.transform = `rotate(${riderBearing}deg)`;
     }
 
-    // Update traversed line up to current waypoint
     if (traversedPolylineRef.current) {
       const traversedCoords = ROUTE_WAYPOINTS.slice(0, riderWaypointIndex + 1);
       traversedPolylineRef.current.setLatLngs(traversedCoords);
     }
   }, [riderWaypointIndex, riderBearing]);
 
-  // Copy OTP helper
+  // Copy OTP Helper
   const handleCopyOtp = () => {
     try {
       navigator.clipboard?.writeText(deliveryOtp);
@@ -435,462 +460,978 @@ export const OrderTrackerModal = ({ isOpen, onClose, targetOrderId = null }) => 
     }
   };
 
-  // Manual Phase Jumper for testing/demo
-  const handleJumpToPhase = (phaseNumber) => {
-    setCurrentPhase(phaseNumber);
-    if (phaseNumber === 1) {
-      setRiderWaypointIndex(0);
-      setDynamicEtaMinutes(32);
-    } else if (phaseNumber === 2) {
-      setRiderWaypointIndex(0);
-      setDynamicEtaMinutes(22);
-    } else if (phaseNumber === 3) {
-      setRiderWaypointIndex(4);
-      setDynamicEtaMinutes(12);
-    } else if (phaseNumber === 4) {
-      setRiderWaypointIndex(ROUTE_WAYPOINTS.length - 1);
-      setDynamicEtaMinutes(0);
+  // Rider OTP Submission Verification
+  const handleVerifyRiderOtp = () => {
+    if (riderOtpInput.trim() === deliveryOtp) {
+      setShowRiderOtpModal(false);
+      setOtpError('');
+      setLifecyclePhase(6); // Move to DELIVERED
+      if (typeof showToast === 'function') {
+        showToast('🎉 OTP 5914 Verified! Order marked DELIVERED successfully.', 'success');
+      }
+    } else {
+      setOtpError('Invalid OTP! Please ask customer for correct 4-digit code (5914).');
     }
   };
 
   if (!isOpen) return null;
 
-  // Phase metadata
-  const phaseConfig = {
-    1: {
-      title: 'Kitchen is preparing your food',
-      subtext: 'Master Chef is cooking with authentic Barpeta spices',
-      badge: 'Order Confirmed',
-      etaText: '28 - 35 mins',
-      progress: 25,
-      icon: ChefHat,
-      color: '#D4AF37'
-    },
-    2: {
-      title: 'Food packed & captain arrived',
-      subtext: 'Rahul Sharma arrived at Jonak Hotel with insulated hot-bag',
-      badge: 'Driver Assigned',
-      etaText: '22 mins',
-      progress: 50,
-      icon: UtensilsCrossed,
-      color: '#3B82F6'
-    },
-    3: {
-      title: 'Rahul is on the way with your order!',
-      subtext: 'Moving via BH Road at 28 km/h • Near Donakuchi Crossing',
-      badge: 'Out for Delivery',
-      etaText: `${dynamicEtaMinutes} mins`,
-      progress: 75,
-      icon: Bike,
-      color: '#10B981'
-    },
-    4: {
-      title: 'Order Delivered! Enjoy your meal 🍽️',
-      subtext: 'Delivered hot & fresh to your doorstep • Thank you!',
-      badge: 'Delivered',
-      etaText: 'Delivered',
-      progress: 100,
-      icon: CheckCircle2,
-      color: '#10B981'
-    }
+  // Phase metadata for Customer & Stepper
+  const phaseMetadata = {
+    1: { title: 'Order Placed & Confirmed', sub: 'Kitchen received your ticket', badge: 'Placed', progress: 15 },
+    2: { title: 'Kitchen is Preparing Food', sub: 'Chef is cooking authentic Barpeta spices', badge: 'Cooking', progress: 35 },
+    3: { title: 'Food Ready & Rider Arrived', sub: 'Packed in insulated thermal hot-bag', badge: 'Packed', progress: 55 },
+    4: { title: 'Rahul is on the way!', sub: 'Moving via BH Road at 28 km/h', badge: 'Out for Delivery', progress: 80 },
+    5: { title: 'Rider Reached Doorstep', sub: 'Please share OTP 5914 with rider', badge: 'Arrived', progress: 95 },
+    6: { title: 'Order Delivered Successfully!', sub: 'Enjoy your hot meal from Jonak Hotel 🍽️', badge: 'Delivered', progress: 100 }
   };
 
-  const activePhaseInfo = phaseConfig[currentPhase];
+  const currentMeta = phaseMetadata[lifecyclePhase] || phaseMetadata[4];
 
   return (
     <div className="jonak-tracker-overlay" onClick={onClose}>
       <div className="jonak-tracker-shell" onClick={(e) => e.stopPropagation()}>
 
-        {/* ------------------------------------------------------------------ */}
-        {/* 1. TOP NAVIGATION BAR                                              */}
-        {/* ------------------------------------------------------------------ */}
-        <header className="jonak-tracker-topbar">
-          <div className="jonak-topbar-left">
-            <button
-              type="button"
-              className="jonak-topbar-back-btn"
-              onClick={onClose}
-              aria-label="Back to Website"
-            >
-              <ArrowLeft size={18} />
-            </button>
-            <div className="jonak-topbar-meta">
-              <h2>Jonak Hotel &amp; Restaurant</h2>
-              <p>
-                <span className="jonak-topbar-order-pill">#{activeOrder.id || 'JNK-84920'}</span>
-                <span>• BH Road, Barpeta</span>
-              </p>
+        {/* ================================================================== */}
+        {/* TOP BRAND & MULTI-ROLE SWITCHER HEADER                             */}
+        {/* ================================================================== */}
+        <header className="jonak-suite-header">
+          {/* Top Brand Line */}
+          <div className="jonak-suite-toprow">
+            <div className="jonak-suite-brand">
+              <div className="jonak-suite-brand-logo">🏨</div>
+              <div className="jonak-suite-brand-text">
+                <h1>Jonak Hotel &amp; Restaurant</h1>
+                <p>jonakhotelgroup.in • Unified Dispatch Suite</p>
+              </div>
+            </div>
+
+            <div className="jonak-suite-controls-right">
+              {/* Recenter Map on demand */}
+              <button
+                type="button"
+                className="jonak-demo-pill"
+                onClick={() => {
+                  if (mapInstanceRef.current && routePolylineRef.current) {
+                    mapInstanceRef.current.fitBounds(routePolylineRef.current.getBounds(), { padding: [40, 40] });
+                    mapInstanceRef.current.invalidateSize();
+                  }
+                }}
+                title="Recenter Map View"
+              >
+                <Navigation size={13} />
+                <span>Fit Route</span>
+              </button>
+
+              <button
+                type="button"
+                className="jonak-topbar-close-btn"
+                onClick={onClose}
+                aria-label="Close Portal"
+              >
+                <X size={22} />
+              </button>
             </div>
           </div>
 
-          <div className="jonak-topbar-right">
-            <a
-              href="tel:+919678582286"
-              className="jonak-help-pill"
-              title="Call Jonak Hotel Reception"
-            >
-              <Phone size={13} />
-              <span>Help</span>
-            </a>
-            <button
-              type="button"
-              className="jonak-topbar-close-btn"
-              onClick={onClose}
-              aria-label="Close Tracker"
-            >
-              <X size={22} />
-            </button>
+          {/* Role Switcher Bar */}
+          <div className="jonak-role-switcher-bar">
+            {/* 3 Interactive View Buttons */}
+            <div className="jonak-role-tabs">
+              <button
+                type="button"
+                className={`jonak-role-tab-btn ${activeSuiteRole === 'CUSTOMER' ? 'active' : ''}`}
+                onClick={() => setActiveSuiteRole('CUSTOMER')}
+              >
+                <ShoppingBag size={14} />
+                <span>Customer View</span>
+              </button>
+
+              <button
+                type="button"
+                className={`jonak-role-tab-btn rider ${activeSuiteRole === 'RIDER' ? 'active' : ''}`}
+                onClick={() => setActiveSuiteRole('RIDER')}
+              >
+                <Bike size={14} />
+                <span>Rider Console</span>
+                {lifecyclePhase === 2 && <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#EF4444', animation: 'pulse 1s infinite' }} />}
+              </button>
+
+              <button
+                type="button"
+                className={`jonak-role-tab-btn kitchen ${activeSuiteRole === 'KITCHEN' ? 'active' : ''}`}
+                onClick={() => setActiveSuiteRole('KITCHEN')}
+              >
+                <ChefHat size={14} />
+                <span>Kitchen Admin</span>
+              </button>
+            </div>
+
+            {/* Continuous Looping State Machine Controls */}
+            <div className="jonak-demo-engine-controls">
+              <button
+                type="button"
+                className="jonak-demo-pill"
+                onClick={() => setIsAutoLooping(v => !v)}
+                title={isAutoLooping ? 'Pause continuous demo cycle' : 'Resume continuous demo cycle'}
+              >
+                {isAutoLooping ? <Pause size={12} /> : <Play size={12} />}
+                <span>{isAutoLooping ? 'Loop: ON' : 'Paused'}</span>
+              </button>
+
+              <div style={{ display: 'flex', gap: '0.25rem' }}>
+                {[1, 2, 3, 4, 5, 6].map(ph => (
+                  <button
+                    key={ph}
+                    type="button"
+                    style={{
+                      background: lifecyclePhase === ph ? '#D4AF37' : 'rgba(255,255,255,0.06)',
+                      color: lifecyclePhase === ph ? '#070B14' : '#94A3B8',
+                      border: 'none',
+                      borderRadius: '4px',
+                      padding: '0.2rem 0.45rem',
+                      fontSize: '0.68rem',
+                      fontWeight: 800,
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => {
+                      setLifecyclePhase(ph);
+                      if (ph === 1 || ph === 2 || ph === 3) setRiderWaypointIndex(0);
+                      else if (ph === 4) setRiderWaypointIndex(4);
+                      else setRiderWaypointIndex(ROUTE_WAYPOINTS.length - 1);
+                    }}
+                    title={`Jump to Phase ${ph}`}
+                  >
+                    P{ph}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </header>
 
-        {/* ------------------------------------------------------------------ */}
-        {/* 2. BODY SPLIT: LEAFLET MAP (LEFT/TOP) & DETAILS SHEET (RIGHT/BOTTOM) */}
-        {/* ------------------------------------------------------------------ */}
-        <div className="jonak-tracker-body">
+        {/* ================================================================== */}
+        {/* SUITE CONTENT AREA                                                 */}
+        {/* ================================================================== */}
+        <div className="jonak-suite-content">
 
-          {/* MAP CANVAS */}
-          <section className="jonak-map-wrapper">
-            {/* Map Div with explicit sizing */}
-            <div ref={mapContainerRef} className="jonak-map-canvas" />
+          {/* ---------------------------------------------------------------- */}
+          {/* VIEW 1: CUSTOMER ORDER & LIVE TRACKING PORTAL (MODULE 3)         */}
+          {/* ---------------------------------------------------------------- */}
+          {activeSuiteRole === 'CUSTOMER' && (
+            <div className="jonak-customer-split">
+              {/* Left / Top Map Canvas */}
+              <div className="jonak-customer-map-pane">
+                <div ref={mapContainerRef} className="jonak-map-canvas-full" />
 
-            {/* Branded Live Dispatch Pill (NO Zomato watermark) */}
-            <div className="jonak-map-floating-pill">
-              <span className="jonak-live-indicator-dot" />
-              <div>
-                <div className="jonak-floating-pill-title">JONAK EXPRESS • LIVE GPS</div>
-                <div className="jonak-floating-pill-sub">BH Road ➔ Barpeta Town</div>
-              </div>
-            </div>
-
-            {/* Recenter Map Button */}
-            <button
-              type="button"
-              className="jonak-recenter-btn"
-              onClick={handleRecenter}
-              title="Recenter Route"
-              aria-label="Recenter Map"
-            >
-              <Navigation size={18} color="#D4AF37" />
-            </button>
-
-            {/* Continuous Loop & Stage Selector Controls */}
-            <div className="jonak-map-sim-controls">
-              <button
-                type="button"
-                className={`jonak-sim-btn ${isAutoLooping ? 'active' : ''}`}
-                onClick={() => setIsAutoLooping(v => !v)}
-                title={isAutoLooping ? 'Pause 4-Stage Auto Cycle' : 'Resume 4-Stage Auto Cycle'}
-              >
-                {isAutoLooping ? <Pause size={12} /> : <Play size={12} />}
-                <span>{isAutoLooping ? 'Auto-Cycle ON' : 'Paused'}</span>
-              </button>
-
-              {[
-                { phase: 1, label: '1. Prep' },
-                { phase: 2, label: '2. Packed' },
-                { phase: 3, label: '3. On Way' },
-                { phase: 4, label: '4. Delivered' }
-              ].map(p => (
-                <button
-                  key={p.phase}
-                  type="button"
-                  className={`jonak-sim-btn ${currentPhase === p.phase ? 'active' : ''}`}
-                  onClick={() => handleJumpToPhase(p.phase)}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-          </section>
-
-          {/* DETAILS & ACTIONS PANEL */}
-          <section className="jonak-details-panel">
-            {/* Grab handle for touch feel */}
-            <span className="jonak-sheet-handle" />
-
-            {/* A. LIVE ETA & PROGRESS BANNER */}
-            <div className="jonak-eta-card">
-              <div className="jonak-eta-top-row">
-                <span className="jonak-eta-badge">
-                  <span className="jonak-live-indicator-dot" style={{ width: '6px', height: '6px' }} />
-                  {activePhaseInfo.badge}
-                </span>
-
-                <div className="jonak-eta-countdown">
-                  <Clock size={16} color="#D4AF37" />
-                  <span className="jonak-eta-time-val">{activePhaseInfo.etaText}</span>
-                  {currentPhase !== 4 && <span className="jonak-eta-time-lbl">ESTIMATED</span>}
-                </div>
-              </div>
-
-              <h3 className="jonak-status-headline">
-                {activePhaseInfo.title}
-              </h3>
-              <p className="jonak-status-subtext">
-                {activePhaseInfo.subtext}
-              </p>
-
-              {/* Progress Bar */}
-              <div className="jonak-progress-bar-track">
-                <div
-                  className="jonak-progress-bar-fill"
-                  style={{ width: `${activePhaseInfo.progress}%` }}
-                />
-              </div>
-
-              {/* 4 Milestone Stepper */}
-              <div className="jonak-stepper-row">
-                {[
-                  { stage: 1, label: 'Placed' },
-                  { stage: 2, label: 'Cooking' },
-                  { stage: 3, label: 'On Way' },
-                  { stage: 4, label: 'Delivered' }
-                ].map(s => {
-                  const isDone = currentPhase > s.stage;
-                  const isCurrent = currentPhase === s.stage;
-                  return (
-                    <div
-                      key={s.stage}
-                      className={`jonak-step-node ${isDone ? 'completed' : isCurrent ? 'current' : ''}`}
-                    >
-                      <div className="jonak-step-dot">
-                        {isDone ? <Check size={12} strokeWidth={3} /> : s.stage}
-                      </div>
-                      <span className="jonak-step-label">{s.label}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* B. DELIVERY CAPTAIN PROFILE CARD */}
-            <div className="jonak-captain-card">
-              <div className="jonak-captain-header">
-                <div className="jonak-captain-bio">
-                  <div className="jonak-captain-avatar">
-                    <span>🛵</span>
-                    <span className="jonak-captain-verified-badge">
-                      <Check size={10} color="#070B14" strokeWidth={3} />
-                    </span>
-                  </div>
+                {/* Branded Live GPS Pill */}
+                <div className="jonak-map-floating-pill">
+                  <span className="jonak-live-indicator-dot" />
                   <div>
-                    <h4 className="jonak-captain-name">
-                      {captain.name}
-                      <span className="jonak-captain-rating">★ {captain.rating}</span>
-                    </h4>
-                    <p className="jonak-captain-stats">
-                      {captain.trips} • {captain.vehicle}
-                    </p>
+                    <div className="jonak-floating-pill-title">JONAK EXPRESS • LIVE GPS</div>
+                    <div className="jonak-floating-pill-sub">BH Road ➔ Barpeta Town</div>
                   </div>
                 </div>
 
-                <div className="jonak-captain-actions">
-                  <a
-                    href={`tel:${captain.phone}`}
-                    className="jonak-captain-btn call"
-                    title={`Call ${captain.name}`}
-                  >
-                    <Phone size={16} />
-                  </a>
-                  <a
-                    href={`https://wa.me/919678582286?text=${encodeURIComponent(`Hello Rahul, I am tracking Order #${activeOrder.id}. Please deliver safely!`)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="jonak-captain-btn"
-                    title="Send WhatsApp Message"
-                  >
-                    <MessageSquare size={16} />
-                  </a>
-                </div>
+                <button
+                  type="button"
+                  className="jonak-recenter-btn"
+                  onClick={() => {
+                    if (mapInstanceRef.current && routePolylineRef.current) {
+                      mapInstanceRef.current.fitBounds(routePolylineRef.current.getBounds(), { padding: [40, 40] });
+                      mapInstanceRef.current.invalidateSize();
+                    }
+                  }}
+                  title="Recenter Route"
+                >
+                  <Navigation size={18} color="#D4AF37" />
+                </button>
               </div>
 
-              {/* Safety Pill */}
-              <div className="jonak-safety-pill">
-                <ShieldCheck size={15} color="#10B981" />
-                <span>Rider temperature verified (98.2°F) • Sanitized helmet &amp; thermal bag</span>
-              </div>
-
-              {/* Quick Tip Selector */}
-              <div className="jonak-tip-section">
-                <div className="jonak-tip-label">
-                  <span>Tip your delivery captain</span>
-                  <span style={{ color: '#D4AF37' }}>
-                    {selectedTip > 0 ? `₹${selectedTip} added` : 'Optional'}
-                  </span>
-                </div>
-                <div className="jonak-tip-chips">
-                  {[20, 30, 50].map(amt => (
-                    <button
-                      key={amt}
-                      type="button"
-                      className={`jonak-tip-chip ${selectedTip === amt ? 'active' : ''}`}
-                      onClick={() => {
-                        const newTip = selectedTip === amt ? 0 : amt;
-                        setSelectedTip(newTip);
-                        if (newTip > 0 && typeof showToast === 'function') {
-                          showToast(`❤️ Added ₹${newTip} tip for ${captain.name}!`, 'success');
-                        }
-                      }}
-                    >
-                      + ₹{amt}
-                    </button>
-                  ))}
+              {/* Right / Bottom Customer Details Panel */}
+              <div className="jonak-customer-details-pane">
+                {/* Switch between Live Tracking and Quick Menu Ordering */}
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.35rem' }}>
                   <button
                     type="button"
-                    className={`jonak-tip-chip ${selectedTip === 100 ? 'active' : ''}`}
-                    onClick={() => {
-                      setSelectedTip(selectedTip === 100 ? 0 : 100);
-                      if (typeof showToast === 'function') {
-                        showToast(`❤️ Generous ₹100 tip for ${captain.name}!`, 'success');
-                      }
-                    }}
+                    className={`jonak-role-tab-btn ${customerSubTab === 'TRACK' ? 'active' : ''}`}
+                    onClick={() => setCustomerSubTab('TRACK')}
+                    style={{ flex: 1, justifyContent: 'center' }}
                   >
-                    + ₹100
+                    <Bike size={14} />
+                    <span>Live Tracking</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`jonak-role-tab-btn ${customerSubTab === 'MENU_ORDER' ? 'active' : ''}`}
+                    onClick={() => setCustomerSubTab('MENU_ORDER')}
+                    style={{ flex: 1, justifyContent: 'center' }}
+                  >
+                    <UtensilsCrossed size={14} />
+                    <span>Dynamic Menu</span>
                   </button>
                 </div>
-              </div>
-            </div>
 
-            {/* C. OTP VERIFICATION BOX */}
-            <div className="jonak-otp-card">
-              <div className="jonak-otp-left">
-                <div className="jonak-otp-icon-wrap">
-                  <Lock size={18} />
-                </div>
-                <div>
-                  <p className="jonak-otp-title">DELIVERY VERIFICATION OTP</p>
-                  <p className="jonak-otp-sub">Share with rider only after receiving food</p>
-                </div>
-              </div>
-
-              <div
-                className="jonak-otp-code-box"
-                onClick={handleCopyOtp}
-                title="Click to copy OTP"
-                style={{ cursor: 'pointer' }}
-              >
-                {copiedOtp ? 'COPIED!' : deliveryOtp}
-              </div>
-            </div>
-
-            {/* D. DELIVERY ADDRESS & SAFETY NOTE */}
-            <div className="jonak-address-card">
-              <div className="jonak-address-row">
-                <MapPin size={18} color="#D4AF37" style={{ flexShrink: 0, marginTop: '2px' }} />
-                <div className="jonak-address-text">
-                  <strong>Delivering to:</strong>
-                  <span>{activeOrder.deliveryAddress || 'BH Road, Barpeta Town, Assam 781314'}</span>
-                </div>
-              </div>
-
-              {/* Leave at Door Switch */}
-              <label className="jonak-door-toggle">
-                <span>Leave order at the door / contactless handover</span>
-                <div className="jonak-switch">
-                  <input
-                    type="checkbox"
-                    checked={leaveAtDoor}
-                    onChange={(e) => {
-                      setLeaveAtDoor(e.target.checked);
-                      if (typeof showToast === 'function') {
-                        showToast(e.target.checked ? '🚪 Contactless handover selected' : 'Direct delivery handover', 'info');
-                      }
-                    }}
-                  />
-                  <span className="jonak-slider" />
-                </div>
-              </label>
-            </div>
-
-            {/* E. ORDER SUMMARY ACCORDION */}
-            <div className="jonak-order-accordion">
-              <div
-                className="jonak-accordion-header"
-                onClick={() => setIsAccordionOpen(v => !v)}
-              >
-                <div className="jonak-accordion-header-left">
-                  <ShoppingBag size={16} color="#D4AF37" />
-                  <span className="jonak-accordion-title">
-                    Order Summary ({activeOrder.items?.length || 3} items)
-                  </span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <span className="jonak-accordion-badge">₹{activeOrder.total || 570}</span>
-                  {isAccordionOpen ? <ChevronUp size={16} color="#94A3B8" /> : <ChevronDown size={16} color="#94A3B8" />}
-                </div>
-              </div>
-
-              {isAccordionOpen && (
-                <div className="jonak-accordion-content">
-                  {(activeOrder.items || [
-                    { name: 'Jonak Special Dum Biryani', qty: 1, price: 350, isVeg: false },
-                    { name: 'Butter Naan', qty: 2, price: 40, isVeg: true },
-                    { name: 'Jeera Rice', qty: 1, price: 140, isVeg: true }
-                  ]).map((item, idx) => (
-                    <div key={idx} className="jonak-order-item-row">
-                      <div className="jonak-order-item-left">
-                        <span className={item.isVeg ? 'jonak-veg-dot' : 'jonak-nonveg-dot'} />
-                        <span style={{ color: '#FFFFFF' }}>
-                          {item.name} <span style={{ color: '#94A3B8' }}>x{item.qty || 1}</span>
-                        </span>
+                {customerSubTab === 'MENU_ORDER' ? (
+                  /* Dynamic Menu & Cart Section */
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                    <div style={{ background: 'rgba(212, 175, 55, 0.08)', padding: '0.75rem', borderRadius: '10px', border: '1px solid rgba(212, 175, 55, 0.25)' }}>
+                      <strong style={{ fontSize: '0.85rem', color: '#D4AF37' }}>Delivery Destination:</strong>
+                      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                        <button
+                          type="button"
+                          className={`jonak-sim-btn ${orderTypeSelection === 'CITY_DELIVERY' ? 'active' : ''}`}
+                          onClick={() => setOrderTypeSelection('CITY_DELIVERY')}
+                        >
+                          <MapPin size={12} />
+                          <span>City Home Delivery</span>
+                        </button>
+                        <button
+                          type="button"
+                          className={`jonak-sim-btn ${orderTypeSelection === 'ROOM_DELIVERY' ? 'active' : ''}`}
+                          onClick={() => setOrderTypeSelection('ROOM_DELIVERY')}
+                        >
+                          <Home size={12} />
+                          <span>Hotel Room Delivery</span>
+                        </button>
                       </div>
-                      <span style={{ fontWeight: 700, color: '#FFFFFF' }}>
-                        ₹{item.price * (item.qty || 1)}
-                      </span>
-                    </div>
-                  ))}
 
-                  <div className="jonak-bill-summary">
-                    <div className="jonak-bill-row">
-                      <span>Item Subtotal</span>
-                      <span>₹{activeOrder.subtotal || 570}</span>
+                      {orderTypeSelection === 'ROOM_DELIVERY' && (
+                        <div style={{ marginTop: '0.65rem' }}>
+                          <label style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Select Room Number:</label>
+                          <select
+                            value={roomNumberInput}
+                            onChange={(e) => setRoomNumberInput(e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '0.5rem',
+                              borderRadius: '6px',
+                              background: '#090E17',
+                              border: '1px solid #D4AF37',
+                              color: '#FFFFFF',
+                              marginTop: '0.25rem',
+                              fontSize: '0.85rem'
+                            }}
+                          >
+                            {['101', '102', '201', '202', '203', '204', '301', '302', '303', '304'].map(r => (
+                              <option key={r} value={r}>Room {r} ({r === '101' ? 'Presidential Suite' : 'Deluxe AC'})</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
                     </div>
-                    <div className="jonak-bill-row">
-                      <span>Delivery Fee (Within 5 KM)</span>
-                      <span style={{ color: '#10B981', fontWeight: 700 }}>FREE (₹0)</span>
+
+                    <h4 style={{ fontSize: '0.9rem', color: '#FFFFFF', margin: '0.2rem 0 0' }}>Jonak Specialties:</h4>
+                    {MENU_ITEMS_CATALOG.map(dish => (
+                      <div
+                        key={dish.id}
+                        style={{
+                          background: 'rgba(255,255,255,0.03)',
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          borderRadius: '10px',
+                          padding: '0.75rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between'
+                        }}
+                      >
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <span className={dish.isVeg ? 'jonak-veg-dot' : 'jonak-nonveg-dot'} />
+                            <strong style={{ fontSize: '0.85rem', color: '#FFFFFF' }}>{dish.name}</strong>
+                          </div>
+                          <p style={{ fontSize: '0.72rem', color: '#94A3B8', margin: '0.2rem 0' }}>{dish.desc}</p>
+                          <span style={{ fontSize: '0.85rem', color: '#D4AF37', fontWeight: 800 }}>₹{dish.price}</span>
+                        </div>
+                        <button
+                          type="button"
+                          className="jonak-sim-btn"
+                          style={{ background: '#10B981', color: '#070B14', fontWeight: 800 }}
+                          onClick={() => {
+                            setCartItems(prev => {
+                              const exists = prev.find(i => i.id === dish.id);
+                              if (exists) {
+                                return prev.map(i => i.id === dish.id ? { ...i, qty: i.qty + 1 } : i);
+                              }
+                              return [...prev, { ...dish, qty: 1 }];
+                            });
+                            if (typeof showToast === 'function') {
+                              showToast(`Added ${dish.name} to order`, 'success');
+                            }
+                          }}
+                        >
+                          + Add
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  /* Live Tracking Cards */
+                  <>
+                    {/* Live ETA Card */}
+                    <div className="jonak-eta-card">
+                      <div className="jonak-eta-top-row">
+                        <span className="jonak-eta-badge">
+                          <span className="jonak-live-indicator-dot" style={{ width: '6px', height: '6px' }} />
+                          {currentMeta.badge}
+                        </span>
+
+                        <div className="jonak-eta-countdown">
+                          <Clock size={16} color="#D4AF37" />
+                          <span className="jonak-eta-time-val">
+                            {lifecyclePhase === 6 ? 'Delivered' : `${etaMinutes} mins`}
+                          </span>
+                          {lifecyclePhase !== 6 && <span className="jonak-eta-time-lbl">ESTIMATED</span>}
+                        </div>
+                      </div>
+
+                      <h3 className="jonak-status-headline">{currentMeta.title}</h3>
+                      <p className="jonak-status-subtext">{currentMeta.sub}</p>
+
+                      <div className="jonak-progress-bar-track">
+                        <div className="jonak-progress-bar-fill" style={{ width: `${currentMeta.progress}%` }} />
+                      </div>
+
+                      {/* Stepper */}
+                      <div className="jonak-stepper-row">
+                        {[
+                          { step: 1, label: 'Placed' },
+                          { step: 2, label: 'Cooking' },
+                          { step: 3, label: 'Packed' },
+                          { step: 4, label: 'On Way' },
+                          { step: 5, label: 'Doorstep' },
+                          { step: 6, label: 'Delivered' }
+                        ].map(st => {
+                          const isDone = lifecyclePhase > st.step;
+                          const isCurrent = lifecyclePhase === st.step;
+                          return (
+                            <div key={st.step} className={`jonak-step-node ${isDone ? 'completed' : isCurrent ? 'current' : ''}`}>
+                              <div className="jonak-step-dot">
+                                {isDone ? <Check size={11} strokeWidth={3} /> : st.step}
+                              </div>
+                              <span className="jonak-step-label">{st.label}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                    {selectedTip > 0 && (
-                      <div className="jonak-bill-row">
-                        <span>Captain Tip</span>
-                        <span>₹{selectedTip}</span>
+
+                    {/* Delivery Captain Card */}
+                    <div className="jonak-captain-card">
+                      <div className="jonak-captain-header">
+                        <div className="jonak-captain-bio">
+                          <div className="jonak-captain-avatar">
+                            <span>🛵</span>
+                          </div>
+                          <div>
+                            <h4 className="jonak-captain-name">
+                              Rahul Sharma
+                              <span className="jonak-captain-rating">★ 4.9</span>
+                            </h4>
+                            <p className="jonak-captain-stats">Hero Splendor • AS-15-H-4821</p>
+                          </div>
+                        </div>
+
+                        <div className="jonak-captain-actions">
+                          <a href="tel:+918876055667" className="jonak-captain-btn call" title="Call Rahul">
+                            <Phone size={15} />
+                          </a>
+                          <a
+                            href={`https://wa.me/919678582286?text=${encodeURIComponent(`Hello Rahul, I am tracking Order #${activeOrder.id}. Please deliver safely!`)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="jonak-captain-btn"
+                            title="Chat on WhatsApp"
+                          >
+                            <MessageSquare size={15} />
+                          </a>
+                        </div>
+                      </div>
+
+                      <div className="jonak-safety-pill">
+                        <ShieldCheck size={15} color="#10B981" />
+                        <span>Rider sanitized helmet &amp; thermal bag verified • Temperature 98.2°F</span>
+                      </div>
+
+                      {/* Tip Selector */}
+                      <div className="jonak-tip-section">
+                        <div className="jonak-tip-label">
+                          <span>Tip your delivery partner:</span>
+                          <span style={{ color: '#D4AF37' }}>{selectedTip > 0 ? `₹${selectedTip} added` : 'Optional'}</span>
+                        </div>
+                        <div className="jonak-tip-chips">
+                          {[20, 30, 50, 100].map(tip => (
+                            <button
+                              key={tip}
+                              type="button"
+                              className={`jonak-tip-chip ${selectedTip === tip ? 'active' : ''}`}
+                              onClick={() => setSelectedTip(selectedTip === tip ? 0 : tip)}
+                            >
+                              + ₹{tip}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Delivery OTP Box */}
+                    <div className="jonak-otp-card">
+                      <div className="jonak-otp-left">
+                        <div className="jonak-otp-icon-wrap">
+                          <Lock size={18} />
+                        </div>
+                        <div>
+                          <p className="jonak-otp-title">DELIVERY VERIFICATION OTP</p>
+                          <p className="jonak-otp-sub">Share with Rahul only upon receiving food</p>
+                        </div>
+                      </div>
+
+                      <div className="jonak-otp-code-box" onClick={handleCopyOtp} style={{ cursor: 'pointer' }} title="Click to copy OTP">
+                        {copiedOtp ? 'COPIED!' : deliveryOtp}
+                      </div>
+                    </div>
+
+                    {/* Delivery Address & Contactless switch */}
+                    <div className="jonak-address-card">
+                      <div className="jonak-address-row">
+                        <MapPin size={18} color="#D4AF37" style={{ flexShrink: 0, marginTop: '2px' }} />
+                        <div className="jonak-address-text">
+                          <strong>Delivering To:</strong>
+                          <span>{activeOrder.deliveryAddress}</span>
+                        </div>
+                      </div>
+
+                      <label className="jonak-door-toggle">
+                        <span>Leave at door / contactless delivery</span>
+                        <div className="jonak-switch">
+                          <input type="checkbox" checked={leaveAtDoor} onChange={e => setLeaveAtDoor(e.target.checked)} />
+                          <span className="jonak-slider" />
+                        </div>
+                      </label>
+                    </div>
+
+                    {/* Order Summary Accordion */}
+                    <div className="jonak-order-accordion">
+                      <div className="jonak-accordion-header" onClick={() => setIsAccordionOpen(v => !v)}>
+                        <div className="jonak-accordion-header-left">
+                          <ShoppingBag size={16} color="#D4AF37" />
+                          <span className="jonak-accordion-title">Order Summary ({cartItems.length} items)</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <span className="jonak-accordion-badge">₹{activeOrder.total}</span>
+                          {isAccordionOpen ? <ChevronUp size={16} color="#94A3B8" /> : <ChevronDown size={16} color="#94A3B8" />}
+                        </div>
+                      </div>
+
+                      {isAccordionOpen && (
+                        <div className="jonak-accordion-content">
+                          {cartItems.map((item, idx) => (
+                            <div key={idx} className="jonak-order-item-row">
+                              <div className="jonak-order-item-left">
+                                <span className={item.isVeg ? 'jonak-veg-dot' : 'jonak-nonveg-dot'} />
+                                <span style={{ color: '#FFFFFF' }}>{item.name} <span style={{ color: '#94A3B8' }}>x{item.qty}</span></span>
+                              </div>
+                              <span style={{ fontWeight: 700, color: '#FFFFFF' }}>₹{item.price * item.qty}</span>
+                            </div>
+                          ))}
+
+                          <div className="jonak-bill-summary">
+                            <div className="jonak-bill-row">
+                              <span>Subtotal</span>
+                              <span>₹{activeOrder.subtotal}</span>
+                            </div>
+                            <div className="jonak-bill-row">
+                              <span>Delivery Fee (Within 5 KM)</span>
+                              <span style={{ color: '#10B981', fontWeight: 700 }}>FREE (₹0)</span>
+                            </div>
+                            {selectedTip > 0 && (
+                              <div className="jonak-bill-row">
+                                <span>Captain Tip</span>
+                                <span>₹{selectedTip}</span>
+                              </div>
+                            )}
+                            <div className="jonak-bill-row total">
+                              <span>Total Amount</span>
+                              <span style={{ color: '#D4AF37' }}>₹{activeOrder.total}</span>
+                            </div>
+                            <div style={{ marginTop: '0.5rem' }}>
+                              <span className="jonak-paid-tag">
+                                <Check size={12} strokeWidth={3} /> Paid via Paytm UPI (paytm.s1i7is2@pty)
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ---------------------------------------------------------------- */}
+          {/* VIEW 2: DEDICATED RIDER / DELIVERY PARTNER CONSOLE (MODULE 2)    */}
+          {/* ---------------------------------------------------------------- */}
+          {activeSuiteRole === 'RIDER' && (
+            <div className="jonak-rider-container">
+              {/* Rider Shift & Earnings Header */}
+              <div style={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
+                <div className="jonak-rider-shift-bar">
+                  <div className="jonak-rider-status-toggle" onClick={() => setIsRiderOnline(v => !v)}>
+                    <span className={`jonak-rider-status-badge ${isRiderOnline ? 'online' : 'offline'}`}>
+                      <span className="jonak-live-indicator-dot" style={{ background: isRiderOnline ? '#10B981' : '#EF4444' }} />
+                      {isRiderOnline ? 'ON DUTY (ONLINE)' : 'OFFLINE'}
+                    </span>
+                  </div>
+
+                  <div className="jonak-rider-earnings-pill">
+                    <DollarSign size={14} />
+                    <span>₹680 Earned today • 7 trips</span>
+                  </div>
+                </div>
+
+                {/* Main Rider View */}
+                <div className="jonak-rider-active-mission">
+                  {/* Left / Top Map View */}
+                  <div className="jonak-rider-map-pane">
+                    <div ref={mapContainerRef} className="jonak-map-canvas-full" />
+
+                    <div className="jonak-map-floating-pill">
+                      <span className="jonak-live-indicator-dot" />
+                      <div>
+                        <div className="jonak-floating-pill-title">RIDER GPS NAVIGATION</div>
+                        <div className="jonak-floating-pill-sub">Speed: 28 km/h • Next turn: BH Road South</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right / Bottom Controls View */}
+                  <div className="jonak-rider-controls-pane">
+                    {/* Incoming Order Radar Alert Card (shown during Phase 2) */}
+                    {lifecyclePhase === 2 && (
+                      <div className="jonak-radar-card">
+                        <div className="jonak-radar-header">
+                          <span className="jonak-radar-alert-tag">
+                            <Radio size={12} />
+                            INCOMING ORDER ALERT
+                          </span>
+                          <span className="jonak-radar-timer-pill">{radarSecondsRemaining}s</span>
+                        </div>
+
+                        <div className="jonak-radar-countdown-bar">
+                          <div className="jonak-radar-countdown-fill" style={{ width: `${(radarSecondsRemaining / 30) * 100}%` }} />
+                        </div>
+
+                        <div className="jonak-radar-locations">
+                          <div className="jonak-radar-loc-row">
+                            <div className="jonak-radar-loc-icon pickup">🏨</div>
+                            <div className="jonak-radar-loc-details">
+                              <h5>PICKUP: Jonak Hotel &amp; Restaurant</h5>
+                              <p>BH Road, near NRL Petrol Pump, Donakuchi (0.4 KM away)</p>
+                            </div>
+                          </div>
+
+                          <div className="jonak-radar-loc-row">
+                            <div className="jonak-radar-loc-icon drop">📍</div>
+                            <div className="jonak-radar-loc-details">
+                              <h5>DROP: {activeOrder.deliveryAddress}</h5>
+                              <p>Distance: 3.4 KM • Estimated Delivery: 18 mins</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="jonak-radar-payout-box">
+                          <span style={{ fontSize: '0.8rem', color: '#CBD5E1' }}>Estimated Rider Payout:</span>
+                          <span style={{ fontSize: '1.2rem', fontWeight: 900, color: '#10B981' }}>₹65</span>
+                        </div>
+
+                        <div className="jonak-radar-actions">
+                          <button
+                            type="button"
+                            className="jonak-radar-btn accept"
+                            onClick={() => {
+                              setLifecyclePhase(3);
+                              if (typeof showToast === 'function') {
+                                showToast('🛵 Order Accepted! Proceed to Jonak Hotel kitchen for pickup.', 'success');
+                              }
+                            }}
+                          >
+                            <Check size={16} strokeWidth={3} />
+                            <span>ACCEPT ORDER</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="jonak-radar-btn decline"
+                            onClick={() => {
+                              setLifecyclePhase(1);
+                              if (typeof showToast === 'function') {
+                                showToast('Order skipped.', 'info');
+                              }
+                            }}
+                          >
+                            Decline
+                          </button>
+                        </div>
                       </div>
                     )}
-                    <div className="jonak-bill-row total">
-                      <span>Grand Total</span>
-                      <span style={{ color: '#D4AF37' }}>
-                        ₹{(Number(activeOrder.total) || 570) + selectedTip}
-                      </span>
+
+                    {/* Turn-by-Turn Navigation & Action Workflow Steps */}
+                    <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '14px', padding: '1rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                        <div>
+                          <strong style={{ fontSize: '0.9rem', color: '#FFFFFF' }}>Order #{activeOrder.id}</strong>
+                          <div style={{ fontSize: '0.74rem', color: '#94A3B8' }}>Customer: {activeOrder.customerName} ({activeOrder.phone})</div>
+                        </div>
+                        <span className="jonak-eta-badge">{currentMeta.badge}</span>
+                      </div>
+
+                      {/* 5 Turn-by-Turn Rider Workflow Action Buttons */}
+                      <div className="jonak-rider-action-grid">
+                        <button
+                          type="button"
+                          className={`jonak-rider-step-btn ${lifecyclePhase === 3 ? 'current' : lifecyclePhase > 3 ? 'completed' : ''}`}
+                          onClick={() => {
+                            setLifecyclePhase(3);
+                            showToast('Status: Reached Jonak Hotel kitchen', 'info');
+                          }}
+                        >
+                          <span>1. Reached Restaurant (Jonak Hotel)</span>
+                          {lifecyclePhase > 3 ? <Check size={16} /> : <Navigation size={16} />}
+                        </button>
+
+                        <button
+                          type="button"
+                          className={`jonak-rider-step-btn ${lifecyclePhase === 3 ? 'completed' : lifecyclePhase === 4 ? 'current' : lifecyclePhase > 4 ? 'completed' : ''}`}
+                          onClick={() => {
+                            setLifecyclePhase(4);
+                            showToast('Status: Order Picked Up! Moving out for delivery', 'success');
+                          }}
+                        >
+                          <span>2. Order Picked Up / Food Collected</span>
+                          {lifecyclePhase > 3 ? <Check size={16} /> : <ShoppingBag size={16} />}
+                        </button>
+
+                        <button
+                          type="button"
+                          className={`jonak-rider-step-btn ${lifecyclePhase === 4 ? 'current' : lifecyclePhase > 4 ? 'completed' : ''}`}
+                          onClick={() => {
+                            setLifecyclePhase(4);
+                            showToast('Status: Out for Delivery on BH Road', 'info');
+                          }}
+                        >
+                          <span>3. Out for Delivery (Live GPS Active)</span>
+                          <Bike size={16} />
+                        </button>
+
+                        <button
+                          type="button"
+                          className={`jonak-rider-step-btn ${lifecyclePhase === 5 ? 'current' : lifecyclePhase > 5 ? 'completed' : ''}`}
+                          onClick={() => {
+                            setLifecyclePhase(5);
+                            showToast('Status: Arrived at Customer Doorstep', 'info');
+                          }}
+                        >
+                          <span>4. Arrived at Customer Doorstep</span>
+                          {lifecyclePhase >= 5 ? <Check size={16} /> : <Home size={16} />}
+                        </button>
+
+                        <button
+                          type="button"
+                          className={`jonak-rider-step-btn ${lifecyclePhase === 6 ? 'completed' : 'current'}`}
+                          style={{ background: lifecyclePhase === 6 ? '#10B981' : '#F59E0B', color: '#070B14' }}
+                          onClick={() => {
+                            setShowRiderOtpModal(true);
+                          }}
+                        >
+                          <span>5. Enter Customer OTP &amp; Complete</span>
+                          <Lock size={16} />
+                        </button>
+                      </div>
+
+                      {/* Quick Communication Tools */}
+                      <div className="jonak-rider-quick-tools" style={{ marginTop: '1rem' }}>
+                        <a href="tel:+919678582286" className="jonak-rider-tool-btn">
+                          <Phone size={14} color="#10B981" />
+                          <span>Call Customer</span>
+                        </a>
+
+                        <a
+                          href={`https://maps.google.com/?q=${DESTINATION_COORDS[0]},${DESTINATION_COORDS[1]}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="jonak-rider-tool-btn"
+                        >
+                          <ExternalLink size={14} color="#D4AF37" />
+                          <span>Open Google Maps</span>
+                        </a>
+
+                        <button
+                          type="button"
+                          className="jonak-rider-tool-btn sos"
+                          onClick={() => showToast('🚨 Emergency SOS alert sent to Jonak Support Manager', 'danger')}
+                        >
+                          <AlertTriangle size={14} />
+                          <span>SOS Support</span>
+                        </button>
+                      </div>
                     </div>
-                    <div style={{ marginTop: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span className="jonak-paid-tag">
-                        <Check size={12} strokeWidth={3} /> Paid via Paytm UPI (paytm.s1i7is2@pty)
-                      </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Rider OTP Verification Submission Modal */}
+              {showRiderOtpModal && (
+                <div className="jonak-mini-modal-overlay" onClick={() => setShowRiderOtpModal(false)}>
+                  <div className="jonak-mini-modal-box" onClick={e => e.stopPropagation()}>
+                    <Lock size={32} color="#D4AF37" style={{ margin: '0 auto 0.5rem' }} />
+                    <h3 style={{ fontSize: '1.1rem', color: '#FFFFFF', margin: 0 }}>Customer Delivery OTP</h3>
+                    <p style={{ fontSize: '0.78rem', color: '#94A3B8', marginTop: '0.35rem' }}>
+                      Ask customer for the 4-digit verification code shown on their tracking screen.
+                    </p>
+
+                    <div className="jonak-otp-inputs-row">
+                      <input
+                        type="text"
+                        maxLength={4}
+                        placeholder="5914"
+                        value={riderOtpInput}
+                        onChange={e => setRiderOtpInput(e.target.value)}
+                        className="jonak-otp-digit"
+                        style={{ width: '160px', letterSpacing: '0.4em' }}
+                        autoFocus
+                      />
+                    </div>
+
+                    {otpError && <p style={{ color: '#EF4444', fontSize: '0.74rem', marginBottom: '0.75rem' }}>{otpError}</p>}
+
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button
+                        type="button"
+                        className="jonak-radar-btn accept"
+                        onClick={handleVerifyRiderOtp}
+                      >
+                        Verify &amp; Complete
+                      </button>
+                      <button
+                        type="button"
+                        className="jonak-radar-btn decline"
+                        onClick={() => setShowRiderOtpModal(false)}
+                      >
+                        Cancel
+                      </button>
                     </div>
                   </div>
                 </div>
               )}
             </div>
+          )}
 
-            {/* Back to Home Button at bottom of details panel */}
-            <button
-              type="button"
-              className="jonak-sim-btn"
-              onClick={onClose}
-              style={{
-                width: '100%',
-                padding: '0.75rem',
-                justifyContent: 'center',
-                background: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                color: '#CBD5E1',
-                fontSize: '0.85rem'
-              }}
-            >
-              <ArrowLeft size={16} />
-              <span>Back to Restaurant Menu</span>
-            </button>
+          {/* ---------------------------------------------------------------- */}
+          {/* VIEW 3: KITCHEN / MANAGER DISPATCH DESK (MODULE 4)               */}
+          {/* ---------------------------------------------------------------- */}
+          {activeSuiteRole === 'KITCHEN' && (
+            <div className="jonak-kitchen-container">
+              {/* Header */}
+              <div className="jonak-kitchen-header">
+                <div className="jonak-kitchen-title">
+                  <ChefHat size={26} color="#F97316" />
+                  <div>
+                    <h3>Master Chef Kitchen &amp; Dispatch Desk</h3>
+                    <p style={{ fontSize: '0.74rem', color: '#94A3B8', margin: 0 }}>Jonak Hotel Kitchen Hub • Live Order Management</p>
+                  </div>
+                  <span>LIVE KDS</span>
+                </div>
 
-          </section>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    type="button"
+                    className="jonak-demo-pill"
+                    style={{ background: '#F97316', color: '#070B14' }}
+                    onClick={() => {
+                      setLifecyclePhase(2);
+                      showToast('Kitchen cooking alert dispatched to chef lane', 'info');
+                    }}
+                  >
+                    Start Cooking
+                  </button>
+                  <button
+                    type="button"
+                    className="jonak-demo-pill"
+                    style={{ background: '#10B981', color: '#070B14' }}
+                    onClick={() => {
+                      setLifecyclePhase(3);
+                      showToast('📢 Food Ready! Pinged assigned rider Rahul Sharma for pickup.', 'success');
+                    }}
+                  >
+                    Mark Food Ready
+                  </button>
+                </div>
+              </div>
+
+              {/* 4 Kanban Operational Columns */}
+              <div className="jonak-kanban-board">
+                {/* Column 1: New Orders */}
+                <div className="jonak-kanban-col">
+                  <div className="jonak-kanban-col-head">
+                    <span className="jonak-kanban-col-title">
+                      <Clock size={14} color="#D4AF37" />
+                      1. New Orders
+                    </span>
+                    <span className="jonak-kanban-count">{lifecyclePhase === 1 ? '1' : '0'}</span>
+                  </div>
+
+                  {lifecyclePhase === 1 ? (
+                    <div className="jonak-kcard active-kcard">
+                      <div className="jonak-kcard-top">
+                        <span className="jonak-kcard-id">#{activeOrder.id}</span>
+                        <span className="jonak-kcard-time">Just now</span>
+                      </div>
+                      <div className="jonak-kcard-items">
+                        • 1x Jonak Special Dum Biryani<br />
+                        • 2x Butter Naan (2 pcs)
+                      </div>
+                      <div className="jonak-kcard-dest">
+                        <MapPin size={12} />
+                        <span>{activeOrder.deliveryAddress}</span>
+                      </div>
+                      <button
+                        type="button"
+                        className="jonak-kcard-action-btn prepare"
+                        onClick={() => setLifecyclePhase(2)}
+                      >
+                        <Flame size={14} />
+                        <span>Accept &amp; Start Cooking</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ padding: '1.5rem', textAlign: 'center', color: '#64748B', fontSize: '0.78rem' }}>No new pending tickets</div>
+                  )}
+                </div>
+
+                {/* Column 2: In Kitchen / Preparing */}
+                <div className="jonak-kanban-col">
+                  <div className="jonak-kanban-col-head">
+                    <span className="jonak-kanban-col-title">
+                      <Flame size={14} color="#F97316" />
+                      2. In Kitchen
+                    </span>
+                    <span className="jonak-kanban-count">{lifecyclePhase === 2 ? '1' : '0'}</span>
+                  </div>
+
+                  {lifecyclePhase === 2 ? (
+                    <div className="jonak-kcard active-kcard">
+                      <div className="jonak-kcard-top">
+                        <span className="jonak-kcard-id">#{activeOrder.id}</span>
+                        <span className="jonak-kcard-time" style={{ color: '#F97316' }}>Cooking (12m left)</span>
+                      </div>
+                      <div className="jonak-kcard-items">
+                        • 1x Jonak Special Dum Biryani<br />
+                        • 2x Butter Naan (2 pcs)
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: '#10B981' }}>✓ Rider Rahul Sharma alerted via radar</div>
+                      <button
+                        type="button"
+                        className="jonak-kcard-action-btn ready"
+                        onClick={() => setLifecyclePhase(3)}
+                      >
+                        <Check size={14} strokeWidth={3} />
+                        <span>Mark Food Ready</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ padding: '1.5rem', textAlign: 'center', color: '#64748B', fontSize: '0.78rem' }}>Kitchen lane clear</div>
+                  )}
+                </div>
+
+                {/* Column 3: Food Ready for Pickup */}
+                <div className="jonak-kanban-col">
+                  <div className="jonak-kanban-col-head">
+                    <span className="jonak-kanban-col-title">
+                      <ShoppingBag size={14} color="#10B981" />
+                      3. Ready for Pickup
+                    </span>
+                    <span className="jonak-kanban-count">{lifecyclePhase === 3 ? '1' : '0'}</span>
+                  </div>
+
+                  {lifecyclePhase === 3 ? (
+                    <div className="jonak-kcard active-kcard">
+                      <div className="jonak-kcard-top">
+                        <span className="jonak-kcard-id">#{activeOrder.id}</span>
+                        <span className="jonak-kcard-time" style={{ color: '#10B981' }}>Hot-Bag Packed</span>
+                      </div>
+                      <div className="jonak-kcard-items">
+                        Assigned: <strong>Rahul Sharma</strong> (Arrived at outlet)
+                      </div>
+                      <button
+                        type="button"
+                        className="jonak-kcard-action-btn assigned"
+                        onClick={() => setLifecyclePhase(4)}
+                      >
+                        <Bike size={14} />
+                        <span>Handover to Rider</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ padding: '1.5rem', textAlign: 'center', color: '#64748B', fontSize: '0.78rem' }}>No orders waiting at counter</div>
+                  )}
+                </div>
+
+                {/* Column 4: Dispatched / Out for Delivery */}
+                <div className="jonak-kanban-col">
+                  <div className="jonak-kanban-col-head">
+                    <span className="jonak-kanban-col-title">
+                      <Bike size={14} color="#3B82F6" />
+                      4. Out on Road
+                    </span>
+                    <span className="jonak-kanban-count">{lifecyclePhase >= 4 ? '1' : '0'}</span>
+                  </div>
+
+                  {lifecyclePhase >= 4 ? (
+                    <div className="jonak-kcard">
+                      <div className="jonak-kcard-top">
+                        <span className="jonak-kcard-id">#{activeOrder.id}</span>
+                        <span className="jonak-kcard-time" style={{ color: '#3B82F6' }}>
+                          {lifecyclePhase === 6 ? 'Delivered' : `On BH Road (~${etaMinutes}m)`}
+                        </span>
+                      </div>
+                      <div className="jonak-kcard-items">
+                        Rider: <strong>Rahul Sharma</strong> (AS-15-H-4821)<br />
+                        Status: {currentMeta.title}
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: '#D4AF37' }}>
+                        OTP Required at doorstep: <strong>5914</strong>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ padding: '1.5rem', textAlign: 'center', color: '#64748B', fontSize: '0.78rem' }}>No active dispatches</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Active Delivery Partners Grid */}
+              <div className="jonak-active-riders-section">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h4 style={{ margin: 0, fontSize: '0.92rem', color: '#FFFFFF' }}>Active Nearby Delivery Partners (Barpeta Hub)</h4>
+                  <span style={{ fontSize: '0.74rem', color: '#10B981' }}>3 Riders Online</span>
+                </div>
+
+                <div className="jonak-riders-grid">
+                  {NEARBY_RIDERS.map(r => (
+                    <div key={r.id} className="jonak-rider-card-mini">
+                      <div className="jonak-rider-mini-bio">
+                        <div className="jonak-rider-mini-avatar">🛵</div>
+                        <div>
+                          <strong style={{ fontSize: '0.82rem', color: '#FFFFFF' }}>{r.name} ★ {r.rating}</strong>
+                          <div style={{ fontSize: '0.7rem', color: '#94A3B8' }}>{r.vehicle} • {r.distanceKm} km away</div>
+                        </div>
+                      </div>
+                      <span style={{ fontSize: '0.7rem', color: '#10B981', fontWeight: 700 }}>{r.battery} Bat</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
         </div>
 

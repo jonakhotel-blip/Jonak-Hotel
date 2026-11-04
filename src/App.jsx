@@ -29,7 +29,7 @@ export function App() {
         setActiveView('admin');
       } else if (window.location.hash === '#cart') {
         setIsCartOpen(true);
-      } else if (window.location.hash === '#track') {
+      } else if (window.location.hash === '#track' || window.location.hash === '#rider' || window.location.hash === '#dispatch' || window.location.hash === '#kds') {
         setIsTrackerOpen(true);
       }
     };
