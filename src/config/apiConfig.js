@@ -71,9 +71,38 @@ export const getWsUrl = () => {
   return `${protocol}//${cleanHost}/ws`;
 };
 
+/**
+ * Build absolute asset URL taking GitHub Pages subpath into account
+ * Resolves /images/... to /Jonak-Hotel/images/... on GitHub Pages
+ * @param {string} path - Image or static asset path
+ * @returns {string} Fully qualified or path-corrected asset URL
+ */
+export const assetUrl = (path) => {
+  if (!path) return '';
+  if (
+    path.startsWith('http://') || 
+    path.startsWith('https://') || 
+    path.startsWith('data:') || 
+    path.startsWith('blob:')
+  ) {
+    return path;
+  }
+  const clean = path.startsWith('/') ? path.slice(1) : path;
+  
+  if (typeof window !== 'undefined') {
+    // If on GitHub Pages (hostname contains github.io OR pathname begins with /Jonak-Hotel)
+    const isGhPages = window.location.hostname.includes('github.io') || window.location.pathname.startsWith('/Jonak-Hotel');
+    if (isGhPages) {
+      return `/Jonak-Hotel/${clean}`;
+    }
+  }
+  return `/${clean}`;
+};
+
 export default {
   API_BASE_URL,
   apiUrl,
+  assetUrl,
   getWsUrl,
   RENDER_PROD_BACKEND
 };

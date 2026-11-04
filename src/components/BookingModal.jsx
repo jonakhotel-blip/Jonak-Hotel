@@ -47,6 +47,7 @@ export const BookingModal = ({ isOpen, onClose, preselectedRoom }) => {
   const [selectedRoomNumber, setSelectedRoomNumber] = useState('');
   const [guestName, setGuestName] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
+  const [guestEmail, setGuestEmail] = useState('');
   const [checkIn, setCheckIn] = useState(() => todayStr);
   const [checkOut, setCheckOut] = useState(() => {
     const d = new Date();
@@ -56,6 +57,8 @@ export const BookingModal = ({ isOpen, onClose, preselectedRoom }) => {
   const [guestsCount, setGuestsCount] = useState('2 Adults');
   const [specialRequests, setSpecialRequests] = useState('');
   const [bookingConfirmed, setBookingConfirmed] = useState(null);
+  const [confirmedWhatsappUrl, setConfirmedWhatsappUrl] = useState('');
+  const [networkErrorMsg, setNetworkErrorMsg] = useState('');
 
   // Digital KYC Document Upload
   const [kycDocUrl, setKycDocUrl] = useState('');
@@ -72,6 +75,23 @@ export const BookingModal = ({ isOpen, onClose, preselectedRoom }) => {
   const [copiedBookingUpi, setCopiedBookingUpi] = useState(false);
   const [showFullBookingQr, setShowFullBookingQr] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // ESC key listener & body overflow lock
+  React.useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [isOpen, onClose]);
 
   // Room Photograph Showcase & Gallery Navigation
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
@@ -210,6 +230,14 @@ export const BookingModal = ({ isOpen, onClose, preselectedRoom }) => {
       errors.guestPhone = 'Please enter a valid 10-digit mobile number.';
     }
 
+    // Validate Email if entered
+    if (guestEmail.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(guestEmail.trim())) {
+        errors.guestEmail = 'Please enter a valid email address.';
+      }
+    }
+
     // Validate Dates
     if (!checkIn || checkIn < todayStr) {
       errors.dates = 'Check-in date cannot be in the past.';
@@ -241,6 +269,7 @@ export const BookingModal = ({ isOpen, onClose, preselectedRoom }) => {
     const bookingRecord = {
       guestName: guestName.trim(),
       phone: cleanPhone,
+      email: guestEmail.trim() || '',
       roomType: activeRoom.title,
       roomId: activeRoom.id,
       roomNumber: assignedRoomFinal,
@@ -275,6 +304,25 @@ export const BookingModal = ({ isOpen, onClose, preselectedRoom }) => {
       paymentUtr: bookingUtr.trim()
     };
 
+    // Construct the canonical WhatsApp reservation message
+    const rawWhatsappText =
+`Hello Jonak Hotel & Restaurant,
+I would like to book a room.
+
+Name: ${guestName.trim()}
+Phone: ${cleanPhone}
+Email: ${guestEmail.trim() || 'N/A'}
+Room Type: ${activeRoom.title}
+Check-in: ${checkIn}
+Check-out: ${checkOut}
+Guests: ${guestsCount}
+Special Request: ${specialRequests.trim() || 'None'}
+Number of Nights: ${nights}
+Estimated Total: ₹${grandTotal.toLocaleString()}`;
+
+    const whatsappUrl = `https://wa.me/919678582286?text=${encodeURIComponent(rawWhatsappText)}`;
+    setConfirmedWhatsappUrl(whatsappUrl);
+
     // Razorpay sandbox simulation
     if (paymentPreference === 'RAZORPAY') {
       try {
@@ -298,46 +346,23 @@ export const BookingModal = ({ isOpen, onClose, preselectedRoom }) => {
       }
     }
 
-    const savedResult = await addRoomBooking(bookingRecord);
+    let savedResult = null;
+    try {
+      savedResult = await addRoomBooking(bookingRecord);
+    } catch (apiErr) {
+      console.warn('Booking API error, falling back to WhatsApp:', apiErr);
+      setNetworkErrorMsg('Network error. You can still confirm instantly on WhatsApp.');
+    }
     setIsSubmitting(false);
 
     if (savedResult && savedResult.success === false) {
-      showToast(savedResult.error || 'Room unavailable for chosen dates.', 'danger');
+      setNetworkErrorMsg('Network error. You can still confirm instantly on WhatsApp.');
+      showToast(savedResult.error || 'Network error. You can still confirm instantly on WhatsApp.', 'danger');
       return;
     }
 
     const savedBooking = savedResult?.booking || bookingRecord;
     setBookingConfirmed(savedBooking);
-
-    // Format WhatsApp Reservation Request (zero sensitive ID numbers transmitted)
-    const whatsappMsg =
-`*ROOM RESERVATION REQUEST - JONAK HOTEL BARPETA*%0A` +
-`----------------------------------------%0A` +
-`*Booking Reference:* #${savedBooking?.id || 'BKG-NEW'}%0A` +
-`*Guest Name:* ${guestName.trim()}%0A` +
-`*Mobile Phone:* ${cleanPhone}%0A` +
-`*Room Category:* ${activeRoom.title} (${activeRoom.ac ? 'A/C' : 'Non-A/C'})%0A` +
-`*Allocated Room:* Room ${assignedRoomFinal} (${activeRoom.floor})%0A` +
-`*Check-in Date:* ${checkIn}%0A` +
-`*Check-out Date:* ${checkOut} (${nights} Night${nights > 1 ? 's' : ''})%0A` +
-`*Number of Guests:* ${guestsCount}%0A` +
-(specialRequests ? `----------------------------------------%0A*Special Requests:* ${specialRequests}%0A` : '') +
-`----------------------------------------%0A` +
-`*TARIFF & 5% GST BREAKDOWN:*%0A` +
-`• Base Tariff: ₹${baseTariff.toLocaleString()} x ${nights} Night${nights > 1 ? 's' : ''} = ₹${baseTotal.toLocaleString()}%0A` +
-`• GST (5%): +₹${gstAmount.toLocaleString()}%0A` +
-`• GRAND TOTAL: ₹${grandTotal.toLocaleString()} (Taxes Included)*%0A` +
-`*(Tariff subject to owner confirmation)*%0A` +
-`----------------------------------------%0A` +
-`*PAYMENT DETAILS:*%0A` +
-`• Payment Mode: ${bookingRecord.paymentMethod}%0A` +
-(bookingUtr.trim() ? `• UPI Transaction UTR: ${bookingUtr.trim()}%0A` : '') +
-(paymentPreference === 'PAYTM_UPI' ? `• Direct UPI Pay Link: upi://pay?pa=paytm.s1i7is2@pty&pn=JONAK%20HOTEL%20AND%20RESTAURANT&am=${grandTotal}&cu=INR%0A` : '') +
-`----------------------------------------%0A` +
-`*Notice:* Valid physical Government Photo ID will be presented in-person at hotel check-in desk.%0A` +
-`Kindly confirm my room reservation. Thank you!`;
-
-    const whatsappUrl = `https://wa.me/${hotelInfo.whatsapp}?text=${whatsappMsg}`;
 
     confetti({
       particleCount: 60,
@@ -473,6 +498,29 @@ export const BookingModal = ({ isOpen, onClose, preselectedRoom }) => {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxWidth: '320px', margin: '0 auto' }}>
+              {confirmedWhatsappUrl && (
+                <a
+                  href={confirmedWhatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-primary"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    background: '#25D366',
+                    color: '#FFFFFF',
+                    fontWeight: 700,
+                    padding: '0.75rem 1rem',
+                    borderRadius: '6px'
+                  }}
+                >
+                  <span>Continue Booking on WhatsApp</span>
+                  <ExternalLink size={16} />
+                </a>
+              )}
+
               <a
                 href={`tel:${hotelInfo.phoneRaw}`}
                 className="btn btn-secondary"
@@ -789,6 +837,70 @@ export const BookingModal = ({ isOpen, onClose, preselectedRoom }) => {
                 )}
               </div>
             </div>
+
+            {/* Email Address */}
+            <div className="form-group">
+              <label className="form-label" htmlFor="booking-email">Email Address (Optional)</label>
+              <input
+                id="booking-email"
+                type="email"
+                placeholder="e.g. anup.baishya@example.com"
+                value={guestEmail}
+                onChange={(e) => {
+                  setGuestEmail(e.target.value);
+                  if (formErrors.guestEmail) setFormErrors(prev => ({ ...prev, guestEmail: undefined }));
+                }}
+                className="form-input"
+                style={{
+                  borderColor: formErrors.guestEmail ? '#EF4444' : 'rgba(255, 255, 255, 0.2)'
+                }}
+              />
+              {formErrors.guestEmail && (
+                <div style={{ color: '#EF4444', fontSize: '0.72rem', marginTop: '0.25rem' }}>
+                  {formErrors.guestEmail}
+                </div>
+              )}
+            </div>
+
+            {/* Network error fallback banner */}
+            {networkErrorMsg && (
+              <div style={{
+                background: 'rgba(239, 68, 68, 0.15)',
+                border: '1.5px solid #EF4444',
+                borderRadius: '8px',
+                padding: '0.85rem 1rem',
+                marginBottom: '1rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.5rem'
+              }}>
+                <div style={{ color: '#FCA5A5', fontSize: '0.82rem', fontWeight: 600 }}>
+                  ⚠️ {networkErrorMsg}
+                </div>
+                {confirmedWhatsappUrl && (
+                  <a
+                    href={confirmedWhatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-primary"
+                    style={{
+                      background: '#25D366',
+                      color: '#FFFFFF',
+                      fontSize: '0.85rem',
+                      fontWeight: 700,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.4rem',
+                      padding: '0.55rem'
+                    }}
+                  >
+                    <span>Continue Booking on WhatsApp</span>
+                    <ExternalLink size={15} />
+                  </a>
+                )}
+              </div>
+            )}
 
             {/* Guests count selection */}
             <div className="form-group">

@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import './PixelHomepage.css';
 import { useHotel } from '../context/HotelContext';
+import { JonakImage } from './common/JonakImage';
 import { 
   MapPin, 
   ChevronDown, 
@@ -107,6 +108,21 @@ export function PixelHomepage({
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+  };
+
+  const handleRoomTabClick = () => {
+    scrollToSection('room-booking-section');
+    setTimeout(() => {
+      handleBookRoom('deluxe-ac');
+    }, 350);
+  };
+
+  const handleNavRoomsClick = () => {
+    setActiveNavTab('rooms');
+    scrollToSection('room-booking-section');
+    setTimeout(() => {
+      handleBookRoom('deluxe-ac');
+    }, 350);
   };
 
   return (
@@ -271,7 +287,7 @@ export function PixelHomepage({
             <button
               type="button"
               className="pixel-tab-btn pixel-tab-rooms"
-              onClick={() => scrollToSection('room-booking-section')}
+              onClick={handleRoomTabClick}
             >
               <div className="pixel-tab-icon-wrap">
                 <BedDouble size={18} color="#FFFFFF" strokeWidth={2.2} />
@@ -288,13 +304,11 @@ export function PixelHomepage({
         <section className="pixel-delivery-banner" aria-label="Free Delivery Promotion">
           {/* Delivery Rider on Right */}
           <div className="pixel-banner-rider">
-            <img 
-              src="/images/ui/delivery_rider.jpg" 
+            <JonakImage 
+              src="/images/jonak-food-delivery-hero.webp" 
+              fallbackSrc="/images/ui/delivery_rider_hq.jpg"
               alt="Jonak Food Delivery Rider" 
               className="pixel-rider-img"
-              onError={(e) => {
-                e.target.style.display = 'none';
-              }}
             />
           </div>
 
@@ -384,13 +398,12 @@ export function PixelHomepage({
             {/* Card 1: Jonak Special Dum Biryani */}
             <article className="pixel-food-card">
               <div className="pixel-card-image-wrap">
-                <img 
-                  src="/images/ui/dum_biryani_card.jpg" 
+                <JonakImage 
+                  src="/images/jonak-special-dum-biryani.webp" 
+                  fallbackSrc="/images/jonak-special-dum-biryani.jpg"
                   alt="Jonak Special Dum Biryani" 
                   className="pixel-card-img"
-                  onError={(e) => {
-                    e.target.src = '/images/food/biryani.jpg';
-                  }}
+                  aspectRatio="4/3"
                 />
                 {/* Floating Special Badge */}
                 <div className="pixel-special-badge">
@@ -424,13 +437,12 @@ export function PixelHomepage({
             {/* Card 2: Chicken Biryani */}
             <article className="pixel-food-card">
               <div className="pixel-card-image-wrap">
-                <img 
-                  src="/images/ui/chicken_biryani_card.jpg" 
+                <JonakImage 
+                  src="/images/chicken-biryani.webp" 
+                  fallbackSrc="/images/chicken-biryani.jpg"
                   alt="Chicken Biryani" 
                   className="pixel-card-img"
-                  onError={(e) => {
-                    e.target.src = '/images/food/biryani.jpg';
-                  }}
+                  aspectRatio="4/3"
                 />
               </div>
 
@@ -480,13 +492,12 @@ export function PixelHomepage({
           <article className="pixel-room-card">
             {/* Left: Luxury Bedroom Photo */}
             <div className="pixel-room-image-wrap">
-              <img 
-                src="/images/ui/ac_room_photo.jpg" 
+              <JonakImage 
+                src="/images/jonak-ac-room.webp" 
+                fallbackSrc="/images/jonak-ac-room.jpg"
                 alt="Jonak Luxury AC Hotel Bedroom" 
                 className="pixel-room-img"
-                onError={(e) => {
-                  e.target.src = '/images/IMG_5217.JPG';
-                }}
+                aspectRatio="16/10"
               />
             </div>
 
@@ -575,10 +586,7 @@ export function PixelHomepage({
             <button 
               type="button" 
               className={`pixel-nav-item ${activeNavTab === 'rooms' ? 'active' : ''}`}
-              onClick={() => {
-                setActiveNavTab('rooms');
-                scrollToSection('room-booking-section');
-              }}
+              onClick={handleNavRoomsClick}
             >
               <BedDouble size={20} color={activeNavTab === 'rooms' ? '#F5C542' : '#CBD5E1'} />
               <span className="pixel-nav-label">Rooms</span>
@@ -689,7 +697,7 @@ export function PixelHomepage({
                 <div className="pixel-menu-catalog-grid">
                   {(menu || []).slice(0, 16).map(dish => (
                     <div key={dish.id} className="pixel-catalog-card">
-                      <img src={dish.image || '/images/food/biryani.jpg'} alt={dish.name} className="pixel-catalog-img" />
+                      <JonakImage src={dish.image || '/images/food/biryani.jpg'} alt={dish.name} className="pixel-catalog-img" />
                       <div className="pixel-catalog-info">
                         <strong>{dish.name}</strong>
                         <span className="pixel-catalog-cat">{dish.category}</span>
@@ -727,19 +735,19 @@ export function PixelHomepage({
               <div className="pixel-modal-scroll-body">
                 <div className="pixel-rooms-catalog-grid">
                   {[
-                    { id: '101', name: 'Presidential Suite 101 (A/C)', price: 5000, img: '/images/rooms/room_101.jpg' },
-                    { id: '102', name: 'Executive Suite 102 (A/C)', price: 5000, img: '/images/rooms/room_102.jpg' },
-                    { id: '201', name: 'Deluxe AC Room 201', price: 2500, img: '/images/rooms/room_201.jpg' },
-                    { id: '202', name: 'Single AC Room 202', price: 2000, img: '/images/rooms/room_202.jpg' },
-                    { id: '203', name: 'Deluxe AC Room 203', price: 2500, img: '/images/rooms/room_203.jpg' },
-                    { id: '204', name: 'Twin AC Room 204', price: 3500, img: '/images/rooms/room_204.jpg' },
-                    { id: '301', name: 'Deluxe AC Room 301', price: 2500, img: '/images/rooms/room_301.jpg' },
-                    { id: '302', name: 'Single Non-AC Room 302', price: 1400, img: '/images/rooms/room_302.jpg' },
-                    { id: '303', name: 'Twin Non-AC Room 303', price: 3500, img: '/images/rooms/room_303.jpg' },
-                    { id: '304', name: 'Single Non-AC Room 304', price: 1400, img: '/images/rooms/room_304.jpg' }
+                    { id: '101', name: 'Presidential Suite 101 (A/C)', price: 5000, img: '/images/jonak-presidential-suite.webp', fallback: '/images/rooms/room_101.jpg' },
+                    { id: '102', name: 'Executive Suite 102 (A/C)', price: 5000, img: '/images/rooms/room_102.jpg', fallback: '/images/rooms/room_102.jpg' },
+                    { id: '201', name: 'Deluxe AC Room 201', price: 2500, img: '/images/jonak-deluxe-ac-room.webp', fallback: '/images/rooms/room_201.jpg' },
+                    { id: '202', name: 'Single AC Room 202', price: 2000, img: '/images/jonak-single-room.webp', fallback: '/images/rooms/room_202.jpg' },
+                    { id: '203', name: 'Deluxe AC Room 203', price: 2500, img: '/images/rooms/room_203.jpg', fallback: '/images/rooms/room_203.jpg' },
+                    { id: '204', name: 'Twin AC Room 204', price: 3500, img: '/images/jonak-twin-room.webp', fallback: '/images/rooms/room_204.jpg' },
+                    { id: '301', name: 'Deluxe AC Room 301', price: 2500, img: '/images/rooms/room_301.jpg', fallback: '/images/rooms/room_301.jpg' },
+                    { id: '302', name: 'Single Non-AC Room 302', price: 1400, img: '/images/rooms/room_302.jpg', fallback: '/images/rooms/room_302.jpg' },
+                    { id: '303', name: 'Twin Non-AC Room 303', price: 3500, img: '/images/rooms/room_303.jpg', fallback: '/images/rooms/room_303.jpg' },
+                    { id: '304', name: 'Single Non-AC Room 304', price: 1400, img: '/images/rooms/room_304.jpg', fallback: '/images/rooms/room_304.jpg' }
                   ].map(r => (
                     <div key={r.id} className="pixel-room-catalog-card">
-                      <img src={r.img} alt={r.name} className="pixel-room-cat-img" />
+                      <JonakImage src={r.img} fallbackSrc={r.fallback} alt={r.name} className="pixel-room-cat-img" />
                       <div className="pixel-room-cat-info">
                         <strong>{r.name}</strong>
                         <span className="pixel-room-cat-price">₹{r.price} / night</span>

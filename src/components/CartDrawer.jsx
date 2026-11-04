@@ -114,6 +114,23 @@ export const CartDrawer = ({ isOpen, onClose }) => {
     }
   };
 
+  // Close drawer on ESC key and prevent body scroll
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [isOpen, onClose]);
+
   // Auto-detect Room or Table from QR URL parameters (?room=101 or ?table=4)
   useEffect(() => {
     try {

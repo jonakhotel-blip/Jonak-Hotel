@@ -42,9 +42,19 @@
   padding-bottom: 2rem;
 }
 
-/* ==============================================================================
- * 1. TOP HEADER
- * ============================================================================== */
+@keyframes jonakShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.jonak-img-wrapper {
+  position: relative;
+  overflow: hidden;
+}
+
+.jonak-img-fallback-container {
+  min-height: 120px;
+}
 .pixel-header {
   position: relative;
   background-color: var(--pixel-teal-main);
