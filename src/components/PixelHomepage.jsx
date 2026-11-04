@@ -727,10 +727,16 @@ export function PixelHomepage({
               <div className="pixel-modal-scroll-body">
                 <div className="pixel-rooms-catalog-grid">
                   {[
-                    { id: '101', name: 'Executive AC Room 101', price: 1499, img: '/images/ui/ac_room_photo.jpg' },
-                    { id: '201', name: 'Deluxe AC Room 201', price: 1499, img: '/images/IMG_5217.JPG' },
-                    { id: '301', name: 'Luxury Suite 301', price: 2199, img: '/images/IMG_5206.JPG' },
-                    { id: '102', name: 'Comfort Standard Room 102', price: 1199, img: '/images/IMG_5222.JPG' }
+                    { id: '101', name: 'Presidential Suite 101 (A/C)', price: 5000, img: '/images/rooms/room_101.jpg' },
+                    { id: '102', name: 'Executive Suite 102 (A/C)', price: 5000, img: '/images/rooms/room_102.jpg' },
+                    { id: '201', name: 'Deluxe AC Room 201', price: 2500, img: '/images/rooms/room_201.jpg' },
+                    { id: '202', name: 'Single AC Room 202', price: 2000, img: '/images/rooms/room_202.jpg' },
+                    { id: '203', name: 'Deluxe AC Room 203', price: 2500, img: '/images/rooms/room_203.jpg' },
+                    { id: '204', name: 'Twin AC Room 204', price: 3500, img: '/images/rooms/room_204.jpg' },
+                    { id: '301', name: 'Deluxe AC Room 301', price: 2500, img: '/images/rooms/room_301.jpg' },
+                    { id: '302', name: 'Single Non-AC Room 302', price: 1400, img: '/images/rooms/room_302.jpg' },
+                    { id: '303', name: 'Twin Non-AC Room 303', price: 3500, img: '/images/rooms/room_303.jpg' },
+                    { id: '304', name: 'Single Non-AC Room 304', price: 1400, img: '/images/rooms/room_304.jpg' }
                   ].map(r => (
                     <div key={r.id} className="pixel-room-catalog-card">
                       <img src={r.img} alt={r.name} className="pixel-room-cat-img" />

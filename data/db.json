@@ -9,7 +9,8 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Slow-cooked fragrant aged Basmati rice layered with juicy marinated meat, boiled egg, saffron & caramelized onions in a sealed handi.",
-      "image": "/images/food/biryani.jpg"
+      "image": "/images/food/food_dum_biryani.jpg",
+      "image_url": "/images/food/food_dum_biryani.jpg"
     },
     {
       "id": "bir-2",
@@ -20,7 +21,8 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Classic Royal Dum Biryani infused with whole cardamom, cloves, succulent chicken cuts, served with raita and gravy.",
-      "image": "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=600&q=80"
+      "image": "/images/food/food_chicken_biryani.jpg",
+      "image_url": "/images/food/food_chicken_biryani.jpg"
     },
     {
       "id": "bir-3",
@@ -53,7 +55,8 @@
       "bestSeller": false,
       "inStock": true,
       "description": "Fresh garden vegetables, soft paneer cubes, and aromatic whole spices cooked in aged basmati rice.",
-      "image": "https://images.unsplash.com/photo-1642821373181-696a54913e9a?auto=format&fit=crop&w=600&q=80"
+      "image": "https://images.unsplash.com/photo-1642821373181-696a54913e9a?auto=format&fit=crop&w=600&q=80",
+      "image_url": "/images/food/food_dum_biryani.jpg"
     },
     {
       "id": "bir-6",
@@ -97,7 +100,8 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Authentic Assamese country-style local chicken curry cooked with mustard oil, potatoes, and native ginger-garlic.",
-      "image": "https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=600&q=80"
+      "image": "https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=600&q=80",
+      "image_url": "/images/food/chicken_curry.jpg"
     },
     {
       "id": "chk-4",
@@ -713,7 +717,8 @@
       "bestSeller": true,
       "inStock": true,
       "description": "Whole chicken marinated in hung yogurt, Kashmiri chillies, and tandoori spices, char-roasted in clay oven.",
-      "image": "/images/food/tandoori.jpg"
+      "image": "/images/food/tandoori.jpg",
+      "image_url": "/images/food/tandoori.jpg"
     },
     {
       "id": "tan-2",
@@ -920,13 +925,12 @@
       "capacity": "2-3 Guests / VIPs",
       "bed": "King Size Royal Bed",
       "size": "420 sq.ft",
-      "image": "/images/IMG_5217.JPG",
+      "image": "/images/rooms/room_101.jpg",
       "gallery": [
+        "/images/rooms/room_101.jpg",
+        "/images/rooms/room_102.jpg",
         "/images/IMG_5217.JPG",
-        "/images/IMG_5218.JPG",
-        "/images/IMG_5219.JPG",
-        "/images/IMG_5206.JPG",
-        "/images/IMG_5203.JPG"
+        "/images/IMG_5218.JPG"
       ],
       "amenities": [
         "Master Climate Control Split A/C",
@@ -944,7 +948,8 @@
         "102"
       ],
       "totalRoomsCount": 2,
-      "availableRoomsCount": 2
+      "availableRoomsCount": 2,
+      "image_url": "/images/rooms/room_101.jpg"
     },
     {
       "id": "twin-ac",
@@ -961,13 +966,11 @@
       "capacity": "2 Adults + 1 Child",
       "bed": "2 Spacious Twin Luxury Beds",
       "size": "320 sq.ft",
-      "image": "/images/IMG_5222.JPG",
+      "image": "/images/rooms/room_204.jpg",
       "gallery": [
+        "/images/rooms/room_204.jpg",
         "/images/IMG_5222.JPG",
-        "/images/IMG_5223.JPG",
-        "/images/IMG_5219.JPG",
-        "/images/IMG_5224.JPG",
-        "/images/IMG_5203.JPG"
+        "/images/IMG_5223.JPG"
       ],
       "amenities": [
         "Whisper-Quiet Split AC",
@@ -984,7 +987,8 @@
         "204"
       ],
       "totalRoomsCount": 1,
-      "availableRoomsCount": 1
+      "availableRoomsCount": 1,
+      "image_url": "/images/rooms/room_204.jpg"
     },
     {
       "id": "twin-non-ac",
@@ -1001,13 +1005,10 @@
       "capacity": "2 Adults + 1 Child",
       "bed": "2 Spacious Twin Beds",
       "size": "320 sq.ft",
-      "image": "/images/IMG_5227.JPG",
+      "image": "/images/rooms/room_303.jpg",
       "gallery": [
-        "/images/IMG_5227.JPG",
-        "/images/IMG_5222.JPG",
-        "/images/IMG_5219.JPG",
-        "/images/IMG_5225.JPG",
-        "/images/IMG_5203.JPG"
+        "/images/rooms/room_303.jpg",
+        "/images/IMG_5227.JPG"
       ],
       "amenities": [
         "Naturally Well-Ventilated Room",
@@ -1024,7 +1025,8 @@
         "303"
       ],
       "totalRoomsCount": 1,
-      "availableRoomsCount": 1
+      "availableRoomsCount": 1,
+      "image_url": "/images/rooms/room_303.jpg"
     },
     {
       "id": "deluxe-ac",
@@ -1043,13 +1045,12 @@
       "capacity": "2 Adults",
       "bed": "Executive Deluxe Double Bed",
       "size": "280 sq.ft",
-      "image": "/images/IMG_5206.JPG",
+      "image": "/images/rooms/room_201.jpg",
       "gallery": [
-        "/images/IMG_5206.JPG",
-        "/images/IMG_5217.JPG",
-        "/images/IMG_5219.JPG",
-        "/images/IMG_5224.JPG",
-        "/images/IMG_5203.JPG"
+        "/images/rooms/room_201.jpg",
+        "/images/rooms/room_203.jpg",
+        "/images/rooms/room_301.jpg",
+        "/images/IMG_5206.JPG"
       ],
       "amenities": [
         "Inverter Split Air Conditioner",
@@ -1068,7 +1069,8 @@
         "301"
       ],
       "totalRoomsCount": 3,
-      "availableRoomsCount": 3
+      "availableRoomsCount": 3,
+      "image_url": "/images/rooms/room_201.jpg"
     },
     {
       "id": "single-ac",
@@ -1085,13 +1087,10 @@
       "capacity": "1 Adult (Solo Traveler / Executive)",
       "bed": "Plush Single Luxury Bed",
       "size": "190 sq.ft",
-      "image": "/images/IMG_5228.JPG",
+      "image": "/images/rooms/room_202.jpg",
       "gallery": [
-        "/images/IMG_5228.JPG",
-        "/images/IMG_5206.JPG",
-        "/images/IMG_5219.JPG",
-        "/images/IMG_5220.JPG",
-        "/images/IMG_5203.JPG"
+        "/images/rooms/room_202.jpg",
+        "/images/IMG_5228.JPG"
       ],
       "amenities": [
         "Whisper-Quiet Split AC",
@@ -1108,7 +1107,8 @@
         "202"
       ],
       "totalRoomsCount": 1,
-      "availableRoomsCount": 1
+      "availableRoomsCount": 1,
+      "image_url": "/images/rooms/room_202.jpg"
     },
     {
       "id": "single-non-ac",
@@ -1126,12 +1126,11 @@
       "capacity": "1 Adult",
       "bed": "Comfortable Single Bed",
       "size": "170 sq.ft",
-      "image": "/images/IMG_5229.JPG",
+      "image": "/images/rooms/room_302.jpg",
       "gallery": [
-        "/images/IMG_5229.JPG",
-        "/images/IMG_5228.JPG",
-        "/images/IMG_5219.JPG",
-        "/images/IMG_5203.JPG"
+        "/images/rooms/room_302.jpg",
+        "/images/rooms/room_304.jpg",
+        "/images/IMG_5229.JPG"
       ],
       "amenities": [
         "Naturally Ventilated Room",
@@ -1149,7 +1148,8 @@
         "304"
       ],
       "totalRoomsCount": 2,
-      "availableRoomsCount": 2
+      "availableRoomsCount": 2,
+      "image_url": "/images/rooms/room_302.jpg"
     }
   ],
   "physicalRooms": [
@@ -1167,6 +1167,7 @@
       "ac": true,
       "isAvailable": true,
       "guestName": "",
+      "image": "/images/rooms/room_101.jpg",
       "highlights": "Luxury Presidential Suite 101, Air-Conditioned, Premium Amenities, In-Room Dining, Free Wi-Fi & Parking"
     },
     {
@@ -1183,6 +1184,7 @@
       "ac": true,
       "isAvailable": true,
       "guestName": "",
+      "image": "/images/rooms/room_102.jpg",
       "highlights": "Executive VIP Suite 102, Air-Conditioned, Private Lounge, In-Room Dining, Free Wi-Fi & Parking"
     },
     {
@@ -1199,6 +1201,7 @@
       "ac": true,
       "isAvailable": true,
       "guestName": "",
+      "image": "/images/rooms/room_201.jpg",
       "highlights": "Executive Deluxe Double Bed, Air-Conditioned, Work Desk, In-Room Dining, Free Wi-Fi"
     },
     {
@@ -1215,6 +1218,7 @@
       "ac": true,
       "isAvailable": true,
       "guestName": "",
+      "image": "/images/rooms/room_202.jpg",
       "highlights": "Comfortable Single/Solo Traveler AC Room, In-Room Dining, Free Wi-Fi"
     },
     {
@@ -1231,6 +1235,7 @@
       "ac": true,
       "isAvailable": true,
       "guestName": "",
+      "image": "/images/rooms/room_203.jpg",
       "highlights": "Executive Deluxe Double Bed, Air-Conditioned, Work Desk, In-Room Dining, Free Wi-Fi"
     },
     {
@@ -1247,6 +1252,7 @@
       "ac": true,
       "isAvailable": true,
       "guestName": "",
+      "image": "/images/rooms/room_204.jpg",
       "highlights": "Spacious Twin Beds, Air-Conditioned, Ideal for Family/Friends, In-Room Dining, Free Wi-Fi"
     },
     {
@@ -1263,6 +1269,7 @@
       "ac": true,
       "isAvailable": true,
       "guestName": "",
+      "image": "/images/rooms/room_301.jpg",
       "highlights": "Executive Deluxe Double Bed, Air-Conditioned, Work Desk, In-Room Dining, Free Wi-Fi"
     },
     {
@@ -1279,6 +1286,7 @@
       "ac": false,
       "isAvailable": true,
       "guestName": "",
+      "image": "/images/rooms/room_302.jpg",
       "highlights": "Budget-Friendly Non-A/C Single Room, Clean & Comfortable, In-Room Dining, Free Wi-Fi"
     },
     {
@@ -1295,6 +1303,7 @@
       "ac": false,
       "isAvailable": true,
       "guestName": "",
+      "image": "/images/rooms/room_303.jpg",
       "highlights": "Spacious Twin Beds, Non-A/C Well-Ventilated Room, In-Room Dining, Free Wi-Fi"
     },
     {
@@ -1311,6 +1320,7 @@
       "ac": false,
       "isAvailable": true,
       "guestName": "",
+      "image": "/images/rooms/room_304.jpg",
       "highlights": "Budget-Friendly Non-A/C Single Room, Clean & Comfortable, In-Room Dining, Free Wi-Fi"
     }
   ],
@@ -1371,6 +1381,49 @@
     }
   ],
   "orders": [
+    {
+      "customer_name": "Test Customer",
+      "customer_phone": "9876543210",
+      "delivery_address": "Donakuchi, Barpeta",
+      "locality": "Donakuchi",
+      "mode": "Home Delivery",
+      "items": [
+        {
+          "name": "Jonak Special Dum Biryani",
+          "qty": 1,
+          "price": 350
+        }
+      ],
+      "subtotal": 350,
+      "delivery_fee": 0,
+      "discount": 0,
+      "total_amount": 350,
+      "payment_mode": "Cash on Delivery",
+      "payment_status": "Pending",
+      "id": "JNK-2145",
+      "order_id": "JNK-2145",
+      "customerName": "Test Customer",
+      "phone": "9876543210",
+      "address": "Donakuchi, Barpeta",
+      "deliveryFee": 0,
+      "total": 350,
+      "payment": "Cash on Delivery",
+      "paymentStatus": "Pending",
+      "order_status": "Received",
+      "status": "Received",
+      "time": "Just now",
+      "createdAt": "2026-11-04T08:21:53.169Z",
+      "created_at": "2026-11-04T08:21:53.169Z",
+      "updatedAt": "2026-11-04T08:21:53.169Z",
+      "updated_at": "2026-11-04T08:21:53.169Z",
+      "timeline": [
+        {
+          "status": "Received",
+          "time": "2026-11-04T08:21:53.169Z",
+          "note": "Order registered server-side"
+        }
+      ]
+    },
     {
       "customer_name": "Test Customer",
       "customer_phone": "9876543210",
@@ -2889,6 +2942,42 @@
   ],
   "eventEnquiries": [],
   "notificationOutbox": [
+    {
+      "id": "notif_1793780513187",
+      "orderId": "JNK-2145",
+      "type": "ORDER_CONFIRMATION",
+      "channel": "SMS_OR_WHATSAPP",
+      "recipient": "9876543210",
+      "status": "LOGGED_PENDING_GATEWAY",
+      "createdAt": "2026-11-04T08:21:53.169Z",
+      "message": "Order #JNK-2145 received at Jonak Hotel & Restaurant. Total: Rs 350."
+    },
+    {
+      "eventId": "evt_1793780513170_de412820",
+      "type": "order.created",
+      "status": "published",
+      "schemaVersion": 1,
+      "aggregate": {
+        "type": "order",
+        "id": "JNK-2145",
+        "version": 1
+      },
+      "recipient": {
+        "kind": "user",
+        "id": "9876543210"
+      },
+      "data": {
+        "orderId": "JNK-2145",
+        "customerName": "Test Customer",
+        "total": 350,
+        "mode": "Home Delivery",
+        "status": "Received",
+        "createdAt": "2026-11-04T08:21:53.169Z"
+      },
+      "occurredAt": "2026-11-04T08:21:53.170Z",
+      "publishedAt": "2026-11-04T08:21:53.171Z",
+      "deliveryCount": 0
+    },
     {
       "eventId": "evt_1793778073686_ae46ef61",
       "type": "booking.requested",
@@ -5071,6 +5160,17 @@
       "connectedSocketsReached": 0,
       "attemptedAt": "2026-11-04T07:41:13.686Z",
       "deliveredAt": "2026-11-04T07:41:13.686Z"
+    },
+    {
+      "attemptId": "att_f14b660b-9999-456f-b12b-e71417c49a13",
+      "eventId": "evt_1793780513170_de412820",
+      "type": "order.created",
+      "recipient": "9876543210",
+      "channel": "WEBSOCKET",
+      "status": "in_app_visible",
+      "connectedSocketsReached": 0,
+      "attemptedAt": "2026-11-04T08:21:53.170Z",
+      "deliveredAt": "2026-11-04T08:21:53.171Z"
     }
   ],
   "orderStatusEvents": [
@@ -5311,6 +5411,13 @@
       "status": "Received",
       "note": "Order registered server-side",
       "createdAt": "2026-11-04T07:41:13.630Z"
+    },
+    {
+      "id": "ose_1793780513169_6d1e12",
+      "orderId": "JNK-2145",
+      "status": "Received",
+      "note": "Order registered server-side",
+      "createdAt": "2026-11-04T08:21:53.169Z"
     }
   ],
   "staff": [
@@ -6040,11 +6147,11 @@
       "name": "Test Guest",
       "phone": "9876543210",
       "address": "Donakuchi",
-      "totalOrders": 10,
+      "totalOrders": 11,
       "totalStays": 5,
       "totalEvents": 0,
-      "totalSpend": 44320,
-      "lastVisitDate": "2026-11-04T07:41:13.686Z",
+      "totalSpend": 44670,
+      "lastVisitDate": "2026-11-04T08:21:53.169Z",
       "customerType": "👑 VIP Guest"
     },
     {
@@ -6068,7 +6175,7 @@
       "totalStays": 1,
       "totalEvents": 0,
       "totalSpend": 5998,
-      "lastVisitDate": "2026-11-04T07:41:13.686Z",
+      "lastVisitDate": "2026-11-04T08:21:53.188Z",
       "customerType": "⭐ Frequent Diner"
     },
     {
@@ -6080,7 +6187,7 @@
       "totalStays": 1,
       "totalEvents": 0,
       "totalSpend": 3998,
-      "lastVisitDate": "2026-11-04T07:41:13.686Z",
+      "lastVisitDate": "2026-11-04T08:21:53.188Z",
       "customerType": "⭐ Frequent Diner"
     },
     {
@@ -6104,7 +6211,7 @@
       "totalStays": 0,
       "totalEvents": 0,
       "totalSpend": 620,
-      "lastVisitDate": "2026-11-04T07:41:13.686Z",
+      "lastVisitDate": "2026-11-04T08:21:53.188Z",
       "customerType": "🌱 New Customer"
     },
     {
@@ -6116,11 +6223,11 @@
       "totalStays": 0,
       "totalEvents": 0,
       "totalSpend": 610,
-      "lastVisitDate": "2026-11-04T07:41:13.686Z",
+      "lastVisitDate": "2026-11-04T08:21:53.188Z",
       "customerType": "🌱 New Customer"
     }
   ],
-  "version": 1793778073740,
+  "version": 1793780513238,
   "users": [
     {
       "id": "usr_owner_001",

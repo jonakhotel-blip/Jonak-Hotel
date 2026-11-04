@@ -77,3 +77,4 @@ export default {
   getWsUrl,
   RENDER_PROD_BACKEND
 };
+

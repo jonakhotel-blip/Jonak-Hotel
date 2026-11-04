@@ -106,6 +106,7 @@ export const OFFICIAL_PHYSICAL_ROOMS = [
     isAvailable: true,
     cleaningStatus: "Clean & Ready",
     guestName: "",
+    image: "/images/rooms/room_101.jpg",
     highlights: "Luxury Presidential Suite 101, Air-Conditioned, Premium Amenities, In-Room Dining, Free Wi-Fi & Parking"
   },
   {
@@ -122,6 +123,7 @@ export const OFFICIAL_PHYSICAL_ROOMS = [
     isAvailable: true,
     cleaningStatus: "Clean & Ready",
     guestName: "",
+    image: "/images/rooms/room_102.jpg",
     highlights: "Executive VIP Suite 102, Air-Conditioned, Private Lounge, In-Room Dining, Free Wi-Fi & Parking"
   },
 
@@ -140,6 +142,7 @@ export const OFFICIAL_PHYSICAL_ROOMS = [
     isAvailable: true,
     cleaningStatus: "Clean & Ready",
     guestName: "",
+    image: "/images/rooms/room_201.jpg",
     highlights: "Executive Deluxe Double Bed, Air-Conditioned, Work Desk, In-Room Dining, Free Wi-Fi"
   },
   {
@@ -156,6 +159,7 @@ export const OFFICIAL_PHYSICAL_ROOMS = [
     isAvailable: true,
     cleaningStatus: "Clean & Ready",
     guestName: "",
+    image: "/images/rooms/room_202.jpg",
     highlights: "Comfortable Single/Solo Traveler AC Room, In-Room Dining, Free Wi-Fi"
   },
   {
@@ -172,6 +176,7 @@ export const OFFICIAL_PHYSICAL_ROOMS = [
     isAvailable: true,
     cleaningStatus: "Clean & Ready",
     guestName: "",
+    image: "/images/rooms/room_203.jpg",
     highlights: "Executive Deluxe Double Bed, Air-Conditioned, Work Desk, In-Room Dining, Free Wi-Fi"
   },
   {
@@ -188,6 +193,7 @@ export const OFFICIAL_PHYSICAL_ROOMS = [
     isAvailable: true,
     cleaningStatus: "Dirty / Needs Cleaning",
     guestName: "",
+    image: "/images/rooms/room_204.jpg",
     highlights: "Spacious Twin Beds, Air-Conditioned, Ideal for Family/Friends, In-Room Dining, Free Wi-Fi"
   },
 
@@ -206,6 +212,7 @@ export const OFFICIAL_PHYSICAL_ROOMS = [
     isAvailable: true,
     cleaningStatus: "Clean & Ready",
     guestName: "",
+    image: "/images/rooms/room_301.jpg",
     highlights: "Executive Deluxe Double Bed, Air-Conditioned, Work Desk, In-Room Dining, Free Wi-Fi"
   },
   {
@@ -222,6 +229,7 @@ export const OFFICIAL_PHYSICAL_ROOMS = [
     isAvailable: true,
     cleaningStatus: "Clean & Ready",
     guestName: "",
+    image: "/images/rooms/room_302.jpg",
     highlights: "Budget-Friendly Non-A/C Single Room, Clean & Comfortable, In-Room Dining, Free Wi-Fi"
   },
   {
@@ -238,6 +246,7 @@ export const OFFICIAL_PHYSICAL_ROOMS = [
     isAvailable: true,
     cleaningStatus: "Cleaning in Progress",
     guestName: "",
+    image: "/images/rooms/room_303.jpg",
     highlights: "Spacious Twin Beds, Non-A/C Well-Ventilated Room, In-Room Dining, Free Wi-Fi"
   },
   {
@@ -254,6 +263,7 @@ export const OFFICIAL_PHYSICAL_ROOMS = [
     isAvailable: true,
     cleaningStatus: "Clean & Ready",
     guestName: "",
+    image: "/images/rooms/room_304.jpg",
     highlights: "Budget-Friendly Non-A/C Single Room, Clean & Comfortable, In-Room Dining, Free Wi-Fi"
   }
 ];
@@ -275,8 +285,8 @@ export const INITIAL_ROOMS = [
     capacity: "2-3 Guests / VIPs",
     bed: "King Size Royal Bed",
     size: "420 sq.ft",
-    image: "/images/IMG_5217.JPG",
-    gallery: ["/images/IMG_5217.JPG", "/images/IMG_5218.JPG", "/images/IMG_5219.JPG", "/images/IMG_5220.JPG", "/images/IMG_5203.JPG"],
+    image: "/images/rooms/room_101.jpg",
+    gallery: ["/images/rooms/room_101.jpg", "/images/rooms/room_102.jpg", "/images/IMG_5217.JPG", "/images/IMG_5218.JPG", "/images/IMG_5219.JPG"],
     galleryLabels: [
       "Master King Bed & Luxury Suite Decor",
       "Private Living Lounge & Executive Sofa",
@@ -309,8 +319,8 @@ export const INITIAL_ROOMS = [
     capacity: "2 Adults + 1 Child",
     bed: "2 Spacious Twin Luxury Beds",
     size: "320 sq.ft",
-    image: "/images/IMG_5222.JPG",
-    gallery: ["/images/IMG_5222.JPG", "/images/IMG_5223.JPG", "/images/IMG_5219.JPG", "/images/IMG_5224.JPG", "/images/IMG_5203.JPG"],
+    image: "/images/rooms/room_204.jpg",
+    gallery: ["/images/rooms/room_204.jpg", "/images/IMG_5222.JPG", "/images/IMG_5223.JPG", "/images/IMG_5224.JPG", "/images/IMG_5203.JPG"],
     galleryLabels: [
       "Two Separate Ergonomic Twin Beds (A/C)",
       "Twin Room Interior & Curtained Window",
@@ -343,8 +353,8 @@ export const INITIAL_ROOMS = [
     capacity: "2 Adults + 1 Child",
     bed: "2 Spacious Twin Beds",
     size: "320 sq.ft",
-    image: "/images/IMG_5227.JPG",
-    gallery: ["/images/IMG_5227.JPG", "/images/IMG_5222.JPG", "/images/IMG_5219.JPG", "/images/IMG_5225.JPG", "/images/IMG_5203.JPG"],
+    image: "/images/rooms/room_303.jpg",
+    gallery: ["/images/rooms/room_303.jpg", "/images/IMG_5227.JPG", "/images/IMG_5222.JPG", "/images/IMG_5225.JPG", "/images/IMG_5203.JPG"],
     galleryLabels: [
       "Spacious Twin Beds (Non-A/C Standard)",
       "Twin Bed Layout & Natural Lighting",
@@ -377,8 +387,8 @@ export const INITIAL_ROOMS = [
     capacity: "2 Adults",
     bed: "Executive Deluxe Double Bed",
     size: "280 sq.ft",
-    image: "/images/IMG_5206.JPG",
-    gallery: ["/images/IMG_5206.JPG", "/images/IMG_5217.JPG", "/images/IMG_5219.JPG", "/images/IMG_5224.JPG", "/images/IMG_5203.JPG"],
+    image: "/images/rooms/room_201.jpg",
+    gallery: ["/images/rooms/room_201.jpg", "/images/rooms/room_203.jpg", "/images/rooms/room_301.jpg", "/images/IMG_5206.JPG", "/images/IMG_5203.JPG"],
     galleryLabels: [
       "Executive Deluxe Double Bed (A/C)",
       "Plush Bedding & Workstation",
@@ -411,8 +421,8 @@ export const INITIAL_ROOMS = [
     capacity: "1 Adult (Solo Traveler / Executive)",
     bed: "Plush Single Luxury Bed",
     size: "190 sq.ft",
-    image: "/images/IMG_5228.JPG",
-    gallery: ["/images/IMG_5228.JPG", "/images/IMG_5206.JPG", "/images/IMG_5219.JPG", "/images/IMG_5220.JPG", "/images/IMG_5203.JPG"],
+    image: "/images/rooms/room_202.jpg",
+    gallery: ["/images/rooms/room_202.jpg", "/images/IMG_5228.JPG", "/images/IMG_5219.JPG", "/images/IMG_5220.JPG", "/images/IMG_5203.JPG"],
     galleryLabels: [
       "Single Executive Plush Bed with A/C",
       "Room Interior & Dedicated Split AC",
@@ -445,8 +455,8 @@ export const INITIAL_ROOMS = [
     capacity: "1 Adult",
     bed: "Comfortable Single Bed",
     size: "170 sq.ft",
-    image: "/images/IMG_5229.JPG",
-    gallery: ["/images/IMG_5229.JPG", "/images/IMG_5228.JPG", "/images/IMG_5219.JPG", "/images/IMG_5203.JPG"],
+    image: "/images/rooms/room_302.jpg",
+    gallery: ["/images/rooms/room_302.jpg", "/images/rooms/room_304.jpg", "/images/IMG_5229.JPG", "/images/IMG_5203.JPG"],
     galleryLabels: [
       "Comfortable Single Bed (Non-A/C Budget)",
       "Clean Single Room Setup & Ceiling Fan",
@@ -1333,8 +1343,8 @@ const RAW_MENU = [
 
 export const DISH_SPECIFIC_IMAGES = {
   // --- BIRIYANI (6 Items) ---
-  'bir-1': '/images/food/biryani.jpg', // Jonak Special Handi Dum Biryani with Egg
-  'bir-2': 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=600&q=80', // Chicken Biryani with leg piece
+  'bir-1': '/images/food/food_dum_biryani.jpg', // Jonak Special Handi Dum Biryani with Egg (AI Generated)
+  'bir-2': '/images/food/food_chicken_biryani.jpg', // Classic Chicken Biryani Platter (AI Generated)
   'bir-3': 'https://images.unsplash.com/photo-1633945274405-b6c8069047b0?auto=format&fit=crop&w=600&q=80', // Royal Mutton Biryani
   'bir-4': 'https://images.unsplash.com/photo-1589302168068-964664d93dc0?auto=format&fit=crop&w=600&q=80', // Egg Biryani with halved eggs
   'bir-5': 'https://images.unsplash.com/photo-1642821373181-696a54913e9a?auto=format&fit=crop&w=600&q=80', // Veg Dum Biryani with peas, carrots, paneer
