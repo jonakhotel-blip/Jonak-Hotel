@@ -37,6 +37,8 @@ jobs:
 
       - name: Build Production Frontend
         run: npm run build
+        env:
+          VITE_API_BASE_URL: https://jonak-hotel.onrender.com
 
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v5

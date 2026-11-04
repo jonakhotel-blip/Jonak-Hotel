@@ -43,8 +43,13 @@ const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 5000;
 
-// Security & Parsing Middleware
-app.use(cors());
+// Security & Parsing Middleware (Full CORS with credentials for GitHub Pages & Render)
+app.use(cors({
+  origin: true,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-CSRF-Token', 'x-idempotency-key']
+}));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -648,6 +653,119 @@ app.get('/api/state', (req, res) => {
     tasks: db.tasks || INITIAL_TASKS,
     version: db.version
   });
+});
+
+// Canonical Mappers for REST APIs
+const mapMenuItem = (item) => ({
+  id: item.id,
+  name: item.name,
+  category: item.category || 'Specialties',
+  description: item.description || '',
+  price: Number(item.price) || 0,
+  image_url: item.image_url || item.image || '/images/food/biryani.jpg',
+  veg_or_nonveg: item.veg_or_nonveg || (item.isVeg ? 'veg' : 'non-veg'),
+  chef_special: item.chef_special !== undefined ? Boolean(item.chef_special) : Boolean(item.bestSeller),
+  available: item.available !== undefined ? Boolean(item.available) : (item.inStock !== false),
+  created_at: item.created_at || '2026-01-01T00:00:00.000Z',
+  updated_at: item.updated_at || new Date().toISOString(),
+  // Backwards compatibility properties
+  image: item.image || item.image_url || '/images/food/biryani.jpg',
+  isVeg: item.isVeg !== undefined ? item.isVeg : (item.veg_or_nonveg === 'veg'),
+  bestSeller: item.bestSeller !== undefined ? item.bestSeller : Boolean(item.chef_special),
+  inStock: item.inStock !== undefined ? item.inStock : (item.available !== false)
+});
+
+const mapRoomItem = (r) => {
+  const tariff = Number(r.price_per_night || r.tariff) || 1400;
+  const gstPercent = Number(r.gst_percent) || 12;
+  const totalPrice = Number(r.total_price) || Math.round(tariff * (1 + gstPercent / 100));
+  const availableRoomNums = r.availableRoomNumbers || (r.assignedRooms || ['101']);
+  const isAvailable = r.available !== undefined ? Boolean(r.available) : (r.status === 'Available' || (r.availableRoomsCount || 1) > 0);
+  return {
+    id: r.id,
+    room_name: r.room_name || r.title || 'Comfort Room',
+    room_type: r.room_type || r.type || 'Deluxe',
+    description: r.description || '',
+    price_per_night: tariff,
+    gst_percent: gstPercent,
+    total_price: totalPrice,
+    capacity: r.capacity || '2 Adults',
+    amenities: Array.isArray(r.amenities) ? r.amenities : ['Master Climate Control A/C', 'Ultra High-Speed Wi-Fi', '24/7 Room Service'],
+    image_url: r.image_url || r.image || '/images/IMG_5217.JPG',
+    availability_status: isAvailable ? 'Available' : 'Sold Out',
+    room_number: r.room_number || availableRoomNums[0] || '101',
+    available: isAvailable,
+    created_at: r.created_at || '2026-01-01T00:00:00.000Z',
+    updated_at: r.updated_at || new Date().toISOString(),
+    // Backwards compatibility properties
+    title: r.title || r.room_name,
+    type: r.type || r.room_type,
+    tariff,
+    status: isAvailable ? 'Available' : 'Sold Out',
+    image: r.image || r.image_url || '/images/IMG_5217.JPG',
+    gallery: r.gallery || [r.image || '/images/IMG_5217.JPG'],
+    availableRoomNumbers: availableRoomNums,
+    totalRoomsCount: r.totalRoomsCount || availableRoomNums.length,
+    availableRoomsCount: isAvailable ? (r.availableRoomsCount || availableRoomNums.length) : 0
+  };
+};
+
+// 3a. Canonical Food Menu Endpoints (/api/menu)
+app.get('/api/menu', (req, res) => {
+  const items = (db.menu || []).map(mapMenuItem);
+  res.json(items);
+});
+
+app.get('/api/menu/:id', (req, res) => {
+  const item = (db.menu || []).find(m => m.id === req.params.id);
+  if (!item) return res.status(404).json({ error: 'Menu item not found' });
+  res.json(mapMenuItem(item));
+});
+
+app.post('/api/menu', requireManagerOrOwner, (req, res) => {
+  const newItem = {
+    ...req.body,
+    id: req.body.id || `dish_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`,
+    name: req.body.name || 'Special Dish',
+    category: req.body.category || 'Specialties',
+    price: Number(req.body.price) || 150,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+  db.menu = [newItem, ...(db.menu || [])];
+  saveData();
+  broadcastSSE('MENU_UPDATED', db.menu);
+  res.status(201).json({ success: true, item: mapMenuItem(newItem) });
+});
+
+app.patch('/api/menu/:id', requireManagerOrOwner, (req, res) => {
+  const idx = (db.menu || []).findIndex(m => m.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'Menu item not found' });
+  db.menu[idx] = { ...db.menu[idx], ...req.body, updated_at: new Date().toISOString() };
+  saveData();
+  broadcastSSE('MENU_UPDATED', db.menu);
+  res.json({ success: true, item: mapMenuItem(db.menu[idx]) });
+});
+
+// 3b. Canonical Rooms Endpoints (/api/rooms)
+app.get('/api/rooms', (req, res) => {
+  const roomsList = (db.rooms || []).map(mapRoomItem);
+  res.json(roomsList);
+});
+
+app.get('/api/rooms/:id', (req, res) => {
+  const r = (db.rooms || []).find(room => room.id === req.params.id);
+  if (!r) return res.status(404).json({ error: 'Room not found' });
+  res.json(mapRoomItem(r));
+});
+
+app.patch('/api/rooms/:id', requireManagerOrOwner, (req, res) => {
+  const idx = (db.rooms || []).findIndex(room => room.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'Room not found' });
+  db.rooms[idx] = { ...db.rooms[idx], ...req.body, updated_at: new Date().toISOString() };
+  saveData();
+  broadcastSSE('ROOMS_UPDATED', db.rooms);
+  res.json({ success: true, room: mapRoomItem(db.rooms[idx]) });
 });
 
 // 4. PIN Quick-Login Endpoint for 4 Team Members:
@@ -1434,7 +1552,26 @@ app.delete('/api/admin/offers/:id', requireManagerOrOwner, (req, res) => {
 const processedIdempotencyKeys = new Map(); // key => { orderId, timestamp }
 
 app.get('/api/orders', (req, res) => {
-  res.json(db.orders);
+  const normalized = (db.orders || []).map(o => ({
+    ...o,
+    id: o.id,
+    order_id: o.order_id || o.id,
+    customer_name: o.customer_name || o.customerName || '',
+    customer_phone: o.customer_phone || o.phone || '',
+    delivery_address: o.delivery_address || o.address || '',
+    locality: o.locality || o.address || 'Barpeta',
+    items: o.items || [],
+    subtotal: o.subtotal || o.subTotal || 0,
+    delivery_fee: o.delivery_fee !== undefined ? o.delivery_fee : (o.deliveryFee || 0),
+    discount: o.discount || 0,
+    total_amount: o.total_amount || o.total || 0,
+    payment_mode: o.payment_mode || o.payment || 'Cash on Delivery',
+    payment_status: o.payment_status || o.paymentStatus || 'Pending',
+    order_status: o.order_status || o.status || 'Received',
+    created_at: o.created_at || o.createdAt || new Date().toISOString(),
+    updated_at: o.updated_at || o.updatedAt || new Date().toISOString()
+  }));
+  res.json(normalized);
 });
 
 // Customer Tracking by ID (Sanitized, No Other Customer PII)
@@ -1481,8 +1618,12 @@ app.post('/api/orders', (req, res) => {
   }
 
   // 2. Validate Customer Name & Phone
-  const customerName = (orderData.customerName || orderData.name || '').trim();
-  const phone = (orderData.phone || orderData.customerPhone || '').replace(/\D/g, '');
+  const customerName = (orderData.customer_name || orderData.customerName || orderData.name || '').trim();
+  const phone = (orderData.customer_phone || orderData.phone || orderData.customerPhone || '').replace(/\D/g, '');
+  const deliveryAddress = orderData.delivery_address || orderData.address || '';
+  const locality = orderData.locality || (typeof orderData.address === 'string' ? orderData.address : 'Barpeta');
+  const subtotal = Number(orderData.subtotal || orderData.subTotal || 0);
+  const discount = Number(orderData.discount || 0);
 
   if (!customerName || customerName.length < 2) {
     return res.status(400).json({ error: 'Customer full name (minimum 2 characters) is required.' });
@@ -1492,11 +1633,11 @@ app.post('/api/orders', (req, res) => {
   }
 
   // 3. Server Delivery Rules Verification
-  let verifiedDeliveryFee = orderData.deliveryFee || 0;
-  if (orderData.mode === 'Home Delivery') {
+  let verifiedDeliveryFee = Number(orderData.delivery_fee !== undefined ? orderData.delivery_fee : (orderData.deliveryFee || 0));
+  if (orderData.mode === 'Home Delivery' || orderData.delivery_address) {
     const calc = calculateDeliveryFee(
       orderData.distanceKm || 0.4,
-      parseFloat(orderData.subtotal) || 0,
+      subtotal,
       db.settings?.deliveryRules
     );
     if (!calc.eligible) {
@@ -1505,19 +1646,45 @@ app.post('/api/orders', (req, res) => {
     verifiedDeliveryFee = calc.deliveryFee;
   }
 
+  const totalAmount = Number(orderData.total_amount || orderData.total || (subtotal + verifiedDeliveryFee - discount));
+  const paymentMode = orderData.payment_mode || orderData.payment || orderData.paymentMethod || 'Cash on Delivery';
+  const paymentStatus = orderData.payment_status || orderData.paymentStatus || 'Pending';
+  const orderStatus = orderData.order_status || orderData.status || 'Received';
+
   const nowIso = new Date().toISOString();
+  const orderId = orderData.id || orderData.order_id || `JNK-${Math.floor(1000 + Math.random() * 9000)}`;
+
   const newOrder = {
     ...orderData,
-    id: orderData.id || `JNK-${Math.floor(1000 + Math.random() * 9000)}`,
+    id: orderId,
+    order_id: orderId,
+    customer_name: customerName,
     customerName,
+    customer_phone: phone,
     phone,
+    delivery_address: deliveryAddress,
+    address: deliveryAddress,
+    locality,
+    items: Array.isArray(orderData.items) ? orderData.items : [],
+    subtotal,
+    delivery_fee: verifiedDeliveryFee,
     deliveryFee: verifiedDeliveryFee,
+    discount,
+    total_amount: totalAmount,
+    total: totalAmount,
+    payment_mode: paymentMode,
+    payment: paymentMode,
+    payment_status: paymentStatus,
+    paymentStatus,
+    order_status: orderStatus,
+    status: orderStatus,
     time: orderData.time || 'Just now',
     createdAt: nowIso,
+    created_at: nowIso,
     updatedAt: nowIso,
-    status: orderData.status || 'Received',
+    updated_at: nowIso,
     timeline: [
-      { status: 'Received', time: nowIso, note: 'Order registered server-side' }
+      { status: orderStatus, time: nowIso, note: 'Order registered server-side' }
     ]
   };
 
@@ -1851,7 +2018,26 @@ const checkRoomAvailability = (roomId, requestedRoomNumber, checkIn, checkOut, e
 };
 
 app.get('/api/bookings', (req, res) => {
-  res.json(db.bookings);
+  const normalized = (db.bookings || []).map(b => ({
+    ...b,
+    id: b.id,
+    booking_id: b.booking_id || b.id,
+    customer_name: b.customer_name || b.guestName || '',
+    customer_phone: b.customer_phone || b.phone || '',
+    customer_email: b.customer_email || b.email || '',
+    room_id: b.room_id || b.roomId || '',
+    room_name: b.room_name || b.roomType || '',
+    check_in_date: b.check_in_date || b.checkIn || '',
+    check_out_date: b.check_out_date || b.checkOut || '',
+    total_days: b.total_days || b.nights || 1,
+    total_amount: b.total_amount || b.totalTariff || b.totalPrice || b.total || 0,
+    payment_mode: b.payment_mode || b.paymentMethod || 'Front Desk (Pay on Arrival)',
+    payment_status: b.payment_status || b.paymentStatus || 'Pending',
+    booking_status: b.booking_status || b.status || 'Confirmed',
+    created_at: b.created_at || b.createdAt || new Date().toISOString(),
+    updated_at: b.updated_at || b.updatedAt || new Date().toISOString()
+  }));
+  res.json(normalized);
 });
 
 // Customer Room Booking Tracking
@@ -1883,12 +2069,18 @@ app.get('/api/bookings/:id/track', (req, res) => {
 
 app.post('/api/bookings', (req, res) => {
   const bookingData = req.body;
-  const guestName = (bookingData.guestName || bookingData.name || '').trim();
-  const phone = (bookingData.phone || '').replace(/\D/g, '');
-  const checkIn = bookingData.checkIn;
-  const checkOut = bookingData.checkOut;
-  const roomId = bookingData.roomId;
-  const requestedRoomNumber = bookingData.roomNumber;
+  const guestName = (bookingData.customer_name || bookingData.guestName || bookingData.name || '').trim();
+  const phone = (bookingData.customer_phone || bookingData.phone || '').replace(/\D/g, '');
+  const email = (bookingData.customer_email || bookingData.email || '').trim();
+  const checkIn = bookingData.check_in_date || bookingData.checkIn;
+  const checkOut = bookingData.check_out_date || bookingData.checkOut;
+  const roomId = bookingData.room_id || bookingData.roomId || 'suite-ac';
+  const requestedRoomNumber = bookingData.room_number || bookingData.roomNumber;
+  const totalDays = Number(bookingData.total_days || bookingData.nights || 1);
+  const totalAmount = Number(bookingData.total_amount || bookingData.totalPrice || bookingData.totalTariff || bookingData.total || 0);
+  const paymentMode = bookingData.payment_mode || bookingData.paymentMethod || 'Front Desk (Pay on Arrival)';
+  const paymentStatus = bookingData.payment_status || bookingData.paymentStatus || 'Pending';
+  const bookingStatus = bookingData.booking_status || bookingData.status || 'Confirmed';
 
   if (!guestName || guestName.length < 2) {
     return res.status(400).json({ error: 'Guest full name is required.' });
@@ -1904,15 +2096,46 @@ app.post('/api/bookings', (req, res) => {
   }
 
   const nowIso = new Date().toISOString();
+  const bookingId = bookingData.id || bookingData.booking_id || `BKG-${Math.floor(1000 + Math.random() * 9000)}`;
+  const allocatedNumber = availCheck.allocatedRoomNumber || requestedRoomNumber || '101';
+  const roomName = bookingData.room_name || bookingData.roomType || 'Comfort Room';
+
   const newBooking = {
     ...bookingData,
-    id: bookingData.id || `BKG-${Math.floor(1000 + Math.random() * 9000)}`,
+    id: bookingId,
+    booking_id: bookingId,
+    customer_name: guestName,
     guestName,
+    customer_phone: phone,
     phone,
-    roomNumber: availCheck.allocatedRoomNumber,
+    customer_email: email,
+    email,
+    room_id: roomId,
+    roomId,
+    room_name: roomName,
+    roomType: roomName,
+    room_number: allocatedNumber,
+    roomNumber: allocatedNumber,
+    check_in_date: checkIn,
+    checkIn,
+    check_out_date: checkOut,
+    checkOut,
+    total_days: totalDays,
+    nights: totalDays,
+    total_amount: totalAmount,
+    totalPrice: totalAmount,
+    totalTariff: totalAmount,
+    payment_mode: paymentMode,
+    paymentMethod: paymentMode,
+    payment_status: paymentStatus,
+    paymentStatus,
+    booking_status: bookingStatus,
+    status: availCheck.status || bookingStatus,
     time: bookingData.time || 'Just now',
     createdAt: nowIso,
-    status: availCheck.status, // "Request to confirm (Pending Front Desk Check)"
+    created_at: nowIso,
+    updatedAt: nowIso,
+    updated_at: nowIso,
     isInstantConfirmed: false
   };
 
@@ -1988,7 +2211,7 @@ app.post('/api/admin/bookings/:bookingId/status', requireManagerOrOwner, handleB
 // ----------------------------------------------------------------------------
 // 14. RAZORPAY PAYMENT SANDBOX & REVENUE INTEGRATION
 // ----------------------------------------------------------------------------
-app.post('/api/payment/create-order', (req, res) => {
+app.post(['/api/payment/create-order', '/api/payment/create'], (req, res) => {
   const { amount, currency = 'INR', receipt, orderType } = req.body;
   const numAmount = parseFloat(amount);
   if (!numAmount || numAmount <= 0) {
@@ -2002,6 +2225,7 @@ app.post('/api/payment/create-order', (req, res) => {
   res.json({
     success: true,
     orderId: razorpayOrderId,
+    id: razorpayOrderId,
     amount: Math.round(numAmount * 100),
     currency,
     keyId,
@@ -2386,14 +2610,33 @@ app.post('/api/track-visit', (req, res) => {
   res.json({ success: true, stats });
 });
 
-app.get('/api/visitors/stats', requireManagerOrOwner, (req, res) => {
+app.get('/api/visitors/stats', (req, res) => {
+  const isAdmin = checkIsAdmin(req);
   const totalOrdersPlaced = (db.orders || []).length;
   const totalBookingsPlaced = (db.bookings || []).length;
   const totalConversions = totalOrdersPlaced + totalBookingsPlaced;
   const lifetime = db.visitorStats?.totalLifetimeVisitors || 1248;
   const conversionRate = lifetime > 0 ? ((totalConversions / lifetime) * 100).toFixed(1) : '0.0';
 
+  if (!isAdmin) {
+    return res.json({
+      success: true,
+      stats: db.visitorStats || {
+        totalLifetimeVisitors: lifetime,
+        todayVisitors: 42,
+        activeNow: 5,
+        conversionRatePercent: parseFloat(conversionRate)
+      },
+      conversionFunnel: {
+        totalVisitors: lifetime,
+        ordersAndBookingsPlaced: totalConversions,
+        conversionRatePercent: parseFloat(conversionRate)
+      }
+    });
+  }
+
   res.json({
+    success: true,
     stats: db.visitorStats,
     conversionFunnel: {
       totalVisitors: lifetime,

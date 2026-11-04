@@ -21,6 +21,7 @@ import {
   INITIAL_OFFERS
 } from '../data/seedData';
 import { realtimeClient } from '../services/realtimeClient';
+import { apiUrl, getWsUrl } from '../config/apiConfig';
 
 const HotelContext = createContext();
 
@@ -337,7 +338,7 @@ export const HotelProvider = ({ children }) => {
     }
     setIsSearchingLocation(true);
     try {
-      const res = await fetch(`/api/delivery/localities?q=${encodeURIComponent(q)}`);
+      const res = await fetch(apiUrl(`/api/delivery/localities?q=${encodeURIComponent(q)}`));
       if (res.ok) {
         const data = await res.json();
         const mapped = data.map(loc => ({
@@ -359,7 +360,7 @@ export const HotelProvider = ({ children }) => {
 
   const resolveCoordinates = useCallback(async (lat, lng) => {
     try {
-      const res = await fetch('/api/delivery/resolve', {
+      const res = await fetch(apiUrl('/api/delivery/resolve'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ lat, lng })
@@ -526,7 +527,8 @@ export const HotelProvider = ({ children }) => {
       ...(options.headers || {})
     };
     try {
-      const response = await fetch(url, { ...options, headers, credentials: 'include' });
+      const fullUrl = apiUrl(url);
+      const response = await fetch(fullUrl, { ...options, headers, credentials: 'include' });
       if (response.status === 401) {
         setIsAdminAuthenticated(false);
         setAdminToken('');
@@ -546,7 +548,7 @@ export const HotelProvider = ({ children }) => {
     try {
       const token = localStorage.getItem(STORAGE_KEYS.ADMIN_TOKEN);
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      const res = await fetch('/api/state', { headers });
+      const res = await fetch(apiUrl('/api/state'), { headers });
       if (!res.ok) return;
 
       const data = await res.json();
@@ -571,7 +573,7 @@ export const HotelProvider = ({ children }) => {
 
       // Also fetch visitors, customers & database status
       try {
-        const vRes = await fetch('/api/visitors/stats');
+        const vRes = await fetch(apiUrl('/api/visitors/stats'));
         if (vRes.ok) {
           const vData = await vRes.json();
           if (vData.stats) {
@@ -579,7 +581,7 @@ export const HotelProvider = ({ children }) => {
             localStorage.setItem('jonak_visitor_stats_v1', JSON.stringify(vData.stats));
           }
         }
-        const cRes = await fetch('/api/customers');
+        const cRes = await fetch(apiUrl('/api/customers'));
         if (cRes.ok) {
           const cData = await cRes.json();
           if (Array.isArray(cData)) {
@@ -587,7 +589,7 @@ export const HotelProvider = ({ children }) => {
             localStorage.setItem('jonak_customers_v1', JSON.stringify(cData));
           }
         }
-        const dbRes = await fetch('/api/db/status');
+        const dbRes = await fetch(apiUrl('/api/db/status'));
         if (dbRes.ok) {
           const dbData = await dbRes.json();
           setDbStatus(dbData);
@@ -613,7 +615,7 @@ export const HotelProvider = ({ children }) => {
       }
       const deviceType = window.innerWidth <= 768 ? 'Mobile' : 'Desktop';
       const page = window.location.hash ? window.location.hash.replace('#', '') || 'Home' : 'Home';
-      fetch('/api/track-visit', {
+      fetch(apiUrl('/api/track-visit'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -637,7 +639,7 @@ export const HotelProvider = ({ children }) => {
     // 2. Connect to Server-Sent Events (SSE) for sub-second updates
     let eventSource;
     try {
-      eventSource = new EventSource('/api/events');
+      eventSource = new EventSource(apiUrl('/api/events'));
 
       eventSource.addEventListener('CONNECTED', (e) => {
         setIsCloudSynced(true);
@@ -871,7 +873,7 @@ export const HotelProvider = ({ children }) => {
     const pollInterval = setInterval(async () => {
       pollCount++;
       try {
-        const res = await fetch('/api/health');
+        const res = await fetch(apiUrl('/api/health'));
         if (res.ok) {
           const info = await res.json();
           if ((info.version && info.version !== serverVersionRef.current) || pollCount % 2 === 0) {
@@ -994,7 +996,7 @@ export const HotelProvider = ({ children }) => {
   // Step 1: Submit Email & Password
   const loginStep1 = async ({ email, password }) => {
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch(apiUrl('/api/auth/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -1010,7 +1012,7 @@ export const HotelProvider = ({ children }) => {
   // Step 2: Verify TOTP Authenticator Code OR Single-Use Recovery Code
   const verifyMfa = async ({ tempToken, code, isRecoveryCode }) => {
     try {
-      const res = await fetch('/api/auth/mfa/verify', {
+      const res = await fetch(apiUrl('/api/auth/mfa/verify'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -1050,7 +1052,7 @@ export const HotelProvider = ({ children }) => {
   // Fast 4-Team PIN Authentication (Shahidul 1234, Hafijur 2222, Master Chef 3333, Hafij 5555)
   const loginWithPin = async (pin) => {
     try {
-      const res = await fetch('/api/auth/pin-login', {
+      const res = await fetch(apiUrl('/api/auth/pin-login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pin: String(pin).trim() })
@@ -1105,7 +1107,7 @@ export const HotelProvider = ({ children }) => {
   // Upload KYC Document to S3 / Storage Adapter
   const uploadKycDocument = async (base64Image, meta = {}) => {
     try {
-      const res = await fetch('/api/upload/kyc', {
+      const res = await fetch(apiUrl('/api/upload/kyc'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1125,7 +1127,7 @@ export const HotelProvider = ({ children }) => {
   // Verify or Reject KYC for Room Booking
   const verifyKyc = async (bookingId, status, notes = '', roomAssigned = null) => {
     try {
-      const res = await fetch(`/api/bookings/${bookingId}/kyc-verify`, {
+      const res = await fetch(apiUrl(`/api/bookings/${bookingId}/kyc-verify`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1152,7 +1154,7 @@ export const HotelProvider = ({ children }) => {
   // Update Rider GPS Location
   const updateOrderLocation = async (orderId, location) => {
     try {
-      const res = await fetch(`/api/orders/${orderId}/location`, {
+      const res = await fetch(apiUrl(`/api/orders/${orderId}/location`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(location)
@@ -1200,7 +1202,7 @@ export const HotelProvider = ({ children }) => {
   // Secure Sign Out
   const adminLogout = async () => {
     try {
-      await fetch('/api/auth/logout', { 
+      await fetch(apiUrl('/api/auth/logout'), { 
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1228,7 +1230,7 @@ export const HotelProvider = ({ children }) => {
   // Password Recovery Request
   const forgotPassword = async (email) => {
     try {
-      const res = await fetch('/api/auth/forgot-password', {
+      const res = await fetch(apiUrl('/api/auth/forgot-password'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
@@ -1242,7 +1244,7 @@ export const HotelProvider = ({ children }) => {
   // Reset Password with Token
   const resetPassword = async ({ token, newPassword }) => {
     try {
-      const res = await fetch('/api/auth/reset-password', {
+      const res = await fetch(apiUrl('/api/auth/reset-password'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, newPassword })
@@ -1256,7 +1258,7 @@ export const HotelProvider = ({ children }) => {
   // Accept Owner-Controlled Invitation
   const acceptInvitation = async ({ token, password }) => {
     try {
-      const res = await fetch('/api/auth/invitations/accept', {
+      const res = await fetch(apiUrl('/api/auth/invitations/accept'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, password })
@@ -1509,7 +1511,7 @@ export const HotelProvider = ({ children }) => {
 
   const calculateDelivery = async ({ localityId, detailedAddress, coordinates, subtotal, orderMode }) => {
     try {
-      const res = await fetch('/api/delivery/calculate', {
+      const res = await fetch(apiUrl('/api/delivery/calculate'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ localityId, detailedAddress, coordinates, subtotal, orderMode })
@@ -1533,7 +1535,7 @@ export const HotelProvider = ({ children }) => {
   const addOrder = async (orderData) => {
     const idempotencyKey = orderData.idempotencyKey || `ord_cli_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     try {
-      const res = await fetch('/api/orders', {
+      const res = await fetch(apiUrl('/api/orders'), {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -1585,7 +1587,7 @@ export const HotelProvider = ({ children }) => {
 
   const addRoomBooking = async (bookingData) => {
     try {
-      const res = await fetch('/api/bookings', {
+      const res = await fetch(apiUrl('/api/bookings'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(bookingData)
@@ -1656,7 +1658,7 @@ export const HotelProvider = ({ children }) => {
   // Payment Gateway (Razorpay Sandbox & UPI Verification)
   const createPaymentOrder = async ({ amount, currency = 'INR', receipt, orderType }) => {
     try {
-      const res = await fetch('/api/payment/create-order', {
+      const res = await fetch(apiUrl('/api/payment/create-order'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount, currency, receipt, orderType })
@@ -1669,7 +1671,7 @@ export const HotelProvider = ({ children }) => {
 
   const verifyPayment = async ({ razorpay_order_id, razorpay_payment_id, razorpay_signature, internalId, orderType }) => {
     try {
-      const res = await fetch('/api/payment/verify', {
+      const res = await fetch(apiUrl('/api/payment/verify'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ razorpay_order_id, razorpay_payment_id, razorpay_signature, internalId, orderType })
@@ -1762,7 +1764,7 @@ export const HotelProvider = ({ children }) => {
     playNotificationChime();
 
     try {
-      const res = await fetch('/api/events', {
+      const res = await fetch(apiUrl('/api/events'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newEnquiry)

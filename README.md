@@ -84,6 +84,45 @@ Accessible via the discrete **"Owner Command Center"** link in the footer or `/a
 
 ---
 
+## 🌐 Production Architecture & Deployment
+
+### Dual-Platform Live Setup
+- **Frontend Host:** GitHub Pages at [https://jonakhotel-blip.github.io/Jonak-Hotel/](https://jonakhotel-blip.github.io/Jonak-Hotel/)
+- **Backend API & Real-time Server:** Render Web Service at [https://jonak-hotel.onrender.com](https://jonak-hotel.onrender.com)
+- **Database:** MongoDB Atlas Cluster with persistent JSON fallback (`server/data/hotel_data.json`)
+- **Central API Resolver (`src/config/apiConfig.js`):** Automatically routes all client API calls and WebSocket/SSE streams to the live Render backend whenever hosted on `*.github.io`, while using same-origin relative URLs on Render or `http://localhost:5000` during local development.
+
+### Canonical Production Endpoints
+1. `GET /api/state` — Full live state (menu, rooms, physical rooms, orders, bookings, ERP inventory, settings)
+2. `GET /api/menu` & `GET /api/menu/:id` — 82+ Dishes with canonical attributes (`id, name, category, description, price, image_url, veg_or_nonveg, chef_special, available, created_at, updated_at`)
+3. `GET /api/rooms` & `GET /api/rooms/:id` — Confirmed room tariffs and amenities (`id, room_name, room_type, description, price_per_night, gst_percent, total_price, capacity, amenities, image_url, availability_status, room_number, available, created_at, updated_at`)
+4. `GET /api/delivery/localities` — Barpeta delivery zones, distance calculations, and deliverability status
+5. `POST /api/delivery/resolve` — Reverse GPS geocoding to nearest Barpeta landmark
+6. `GET /api/orders` & `POST /api/orders` — Food ordering with idempotency, 5 KM free delivery rules, dual snake_case/camelCase schemas, and real-time SSE dispatch
+7. `GET /api/bookings` & `POST /api/bookings` — Room reservations with live physical room conflict prevention, date range validation, and dual schema support
+8. `POST /api/payment/create` & `POST /api/payment/create-order` — Payment order generation supporting Razorpay sandbox and direct Paytm UPI (`paytm.s1i7is2@pty`)
+9. `POST /api/payment/verify` — Cryptographic signature and transaction verification
+10. `GET /api/visitors/stats` — Public traffic counters and conversion funnel metrics
+
+### Verified Room Tariffs
+- **Single Non-AC:** ₹1,400 / night
+- **Single AC:** ₹2,000 / night (Promotional teaser: from ₹1,499)
+- **Deluxe AC:** ₹2,500 / night
+- **Twin Non-AC:** ₹3,500 / night
+- **Twin AC:** ₹3,500 / night
+- **Presidential Suite (A/C):** ₹5,000 / night
+
+### 4-Person Role-Based Admin PINs (`/#admin`)
+1. **👑 Shahidul Islam (Proprietor / Super Admin):** `1234`
+2. **🛎️ Hafijur (Reception, Billing & KYC Desk):** `2222`
+3. **👨‍🍳 Master Chef (Head Chef & Kitchen Lead):** `3333`
+4. **🏃‍♂️ Hafij (Caretaker & Housekeeping):** `5555`
+
+### WhatsApp Fallback Communication
+Official Hotel Helpline: **`+91 96785 82286`** (`919678582286`). Both food orders and room reservations format itemized WhatsApp receipts with Google Maps locations for 1-tap customer follow-up.
+
+---
+
 ## 🛠️ Local Development & Running
 
 ```bash

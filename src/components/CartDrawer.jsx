@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useHotel, isKitchenCurrentlyOpen } from '../context/HotelContext';
+import { apiUrl } from '../config/apiConfig';
 import confetti from 'canvas-confetti';
 import { 
   X, 
@@ -290,7 +291,7 @@ export const CartDrawer = ({ isOpen, onClose }) => {
   const handleRefreshTracking = async (orderId) => {
     setIsRefreshingStatus(true);
     try {
-      const res = await fetch(`/api/orders/${orderId}/track`);
+      const res = await fetch(apiUrl(`/api/orders/${orderId}/track`));
       if (res.ok) {
         const data = await res.json();
         setTrackingData(data);

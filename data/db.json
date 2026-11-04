@@ -1372,6 +1372,92 @@
   ],
   "orders": [
     {
+      "customer_name": "Test Customer",
+      "customer_phone": "9876543210",
+      "delivery_address": "Donakuchi, Barpeta",
+      "locality": "Donakuchi",
+      "mode": "Home Delivery",
+      "items": [
+        {
+          "name": "Jonak Special Dum Biryani",
+          "qty": 1,
+          "price": 350
+        }
+      ],
+      "subtotal": 350,
+      "delivery_fee": 0,
+      "discount": 0,
+      "total_amount": 350,
+      "payment_mode": "Cash on Delivery",
+      "payment_status": "Pending",
+      "id": "JNK-9853",
+      "order_id": "JNK-9853",
+      "customerName": "Test Customer",
+      "phone": "9876543210",
+      "address": "Donakuchi, Barpeta",
+      "deliveryFee": 0,
+      "total": 350,
+      "payment": "Cash on Delivery",
+      "paymentStatus": "Pending",
+      "order_status": "Received",
+      "status": "Received",
+      "time": "Just now",
+      "createdAt": "2026-11-04T07:41:13.630Z",
+      "created_at": "2026-11-04T07:41:13.630Z",
+      "updatedAt": "2026-11-04T07:41:13.630Z",
+      "updated_at": "2026-11-04T07:41:13.630Z",
+      "timeline": [
+        {
+          "status": "Received",
+          "time": "2026-11-04T07:41:13.630Z",
+          "note": "Order registered server-side"
+        }
+      ]
+    },
+    {
+      "customer_name": "Test Customer",
+      "customer_phone": "9876543210",
+      "delivery_address": "Donakuchi, Barpeta",
+      "locality": "Donakuchi",
+      "mode": "Home Delivery",
+      "items": [
+        {
+          "name": "Jonak Special Dum Biryani",
+          "qty": 1,
+          "price": 350
+        }
+      ],
+      "subtotal": 350,
+      "delivery_fee": 0,
+      "discount": 0,
+      "total_amount": 350,
+      "payment_mode": "Cash on Delivery",
+      "payment_status": "Pending",
+      "id": "JNK-5171",
+      "order_id": "JNK-5171",
+      "customerName": "Test Customer",
+      "phone": "9876543210",
+      "address": "Donakuchi, Barpeta",
+      "deliveryFee": 0,
+      "total": 350,
+      "payment": "Cash on Delivery",
+      "paymentStatus": "Pending",
+      "order_status": "Received",
+      "status": "Received",
+      "time": "Just now",
+      "createdAt": "2026-11-04T07:38:09.983Z",
+      "created_at": "2026-11-04T07:38:09.983Z",
+      "updatedAt": "2026-11-04T07:38:09.983Z",
+      "updated_at": "2026-11-04T07:38:09.983Z",
+      "timeline": [
+        {
+          "status": "Received",
+          "time": "2026-11-04T07:38:09.983Z",
+          "note": "Order registered server-side"
+        }
+      ]
+    },
+    {
       "customerName": "Bikash Kalita",
       "customerPhone": "9864012345",
       "deliveryAddress": "Bilortari Hati, Barpeta, Assam 781301",
@@ -2335,6 +2421,80 @@
   ],
   "bookings": [
     {
+      "customer_name": "Guest Traveler",
+      "customer_phone": "9876543210",
+      "customer_email": "guest@example.com",
+      "room_id": "suite-ac",
+      "room_name": "Presidential Suite",
+      "check_in_date": "2026-11-20",
+      "check_out_date": "2026-11-22",
+      "total_days": 2,
+      "total_amount": 11200,
+      "payment_mode": "Front Desk (Pay on Arrival)",
+      "id": "BKG-9314",
+      "booking_id": "BKG-9314",
+      "guestName": "Guest Traveler",
+      "phone": "9876543210",
+      "email": "guest@example.com",
+      "roomId": "suite-ac",
+      "roomType": "Presidential Suite",
+      "room_number": "102",
+      "roomNumber": "102",
+      "checkIn": "2026-11-20",
+      "checkOut": "2026-11-22",
+      "nights": 2,
+      "totalPrice": 11200,
+      "totalTariff": 11200,
+      "paymentMethod": "Front Desk (Pay on Arrival)",
+      "payment_status": "Pending",
+      "paymentStatus": "Pending",
+      "booking_status": "Confirmed",
+      "status": "Request to confirm (Pending Front Desk Check)",
+      "time": "Just now",
+      "createdAt": "2026-11-04T07:41:13.686Z",
+      "created_at": "2026-11-04T07:41:13.686Z",
+      "updatedAt": "2026-11-04T07:41:13.686Z",
+      "updated_at": "2026-11-04T07:41:13.686Z",
+      "isInstantConfirmed": false
+    },
+    {
+      "customer_name": "Guest Traveler",
+      "customer_phone": "9876543210",
+      "customer_email": "guest@example.com",
+      "room_id": "suite-ac",
+      "room_name": "Presidential Suite",
+      "check_in_date": "2026-11-20",
+      "check_out_date": "2026-11-22",
+      "total_days": 2,
+      "total_amount": 11200,
+      "payment_mode": "Front Desk (Pay on Arrival)",
+      "id": "BKG-9838",
+      "booking_id": "BKG-9838",
+      "guestName": "Guest Traveler",
+      "phone": "9876543210",
+      "email": "guest@example.com",
+      "roomId": "suite-ac",
+      "roomType": "Presidential Suite",
+      "room_number": "101",
+      "roomNumber": "101",
+      "checkIn": "2026-11-20",
+      "checkOut": "2026-11-22",
+      "nights": 2,
+      "totalPrice": 11200,
+      "totalTariff": 11200,
+      "paymentMethod": "Front Desk (Pay on Arrival)",
+      "payment_status": "Pending",
+      "paymentStatus": "Pending",
+      "booking_status": "Confirmed",
+      "status": "Request to confirm (Pending Front Desk Check)",
+      "time": "Just now",
+      "createdAt": "2026-11-04T07:38:10.042Z",
+      "created_at": "2026-11-04T07:38:10.042Z",
+      "updatedAt": "2026-11-04T07:38:10.042Z",
+      "updated_at": "2026-11-04T07:38:10.042Z",
+      "isInstantConfirmed": false
+    },
+    {
       "guestName": "Rahul Das",
       "phone": "9876543210",
       "email": "rahul.das@example.com",
@@ -2729,6 +2889,136 @@
   ],
   "eventEnquiries": [],
   "notificationOutbox": [
+    {
+      "eventId": "evt_1793778073686_ae46ef61",
+      "type": "booking.requested",
+      "status": "published",
+      "schemaVersion": 1,
+      "aggregate": {
+        "type": "booking",
+        "id": "BKG-9314",
+        "version": 1
+      },
+      "recipient": {
+        "kind": "user",
+        "id": "9876543210"
+      },
+      "data": {
+        "bookingId": "BKG-9314",
+        "guestName": "Guest Traveler",
+        "roomType": "Presidential Suite",
+        "roomNumber": "102",
+        "checkIn": "2026-11-20",
+        "checkOut": "2026-11-22",
+        "status": "Request to confirm (Pending Front Desk Check)",
+        "totalTariff": 11200,
+        "createdAt": "2026-11-04T07:41:13.686Z"
+      },
+      "occurredAt": "2026-11-04T07:41:13.686Z",
+      "publishedAt": "2026-11-04T07:41:13.686Z",
+      "deliveryCount": 0
+    },
+    {
+      "id": "notif_1793778073647",
+      "orderId": "JNK-9853",
+      "type": "ORDER_CONFIRMATION",
+      "channel": "SMS_OR_WHATSAPP",
+      "recipient": "9876543210",
+      "status": "LOGGED_PENDING_GATEWAY",
+      "createdAt": "2026-11-04T07:41:13.630Z",
+      "message": "Order #JNK-9853 received at Jonak Hotel & Restaurant. Total: Rs 350."
+    },
+    {
+      "eventId": "evt_1793778073630_3c0ec4bb",
+      "type": "order.created",
+      "status": "published",
+      "schemaVersion": 1,
+      "aggregate": {
+        "type": "order",
+        "id": "JNK-9853",
+        "version": 1
+      },
+      "recipient": {
+        "kind": "user",
+        "id": "9876543210"
+      },
+      "data": {
+        "orderId": "JNK-9853",
+        "customerName": "Test Customer",
+        "total": 350,
+        "mode": "Home Delivery",
+        "status": "Received",
+        "createdAt": "2026-11-04T07:41:13.630Z"
+      },
+      "occurredAt": "2026-11-04T07:41:13.630Z",
+      "publishedAt": "2026-11-04T07:41:13.630Z",
+      "deliveryCount": 0
+    },
+    {
+      "eventId": "evt_1793777890042_8a8dae32",
+      "type": "booking.requested",
+      "status": "published",
+      "schemaVersion": 1,
+      "aggregate": {
+        "type": "booking",
+        "id": "BKG-9838",
+        "version": 1
+      },
+      "recipient": {
+        "kind": "user",
+        "id": "9876543210"
+      },
+      "data": {
+        "bookingId": "BKG-9838",
+        "guestName": "Guest Traveler",
+        "roomType": "Presidential Suite",
+        "roomNumber": "101",
+        "checkIn": "2026-11-20",
+        "checkOut": "2026-11-22",
+        "status": "Request to confirm (Pending Front Desk Check)",
+        "totalTariff": 11200,
+        "createdAt": "2026-11-04T07:38:10.042Z"
+      },
+      "occurredAt": "2026-11-04T07:38:10.042Z",
+      "publishedAt": "2026-11-04T07:38:10.042Z",
+      "deliveryCount": 0
+    },
+    {
+      "id": "notif_1793777890000",
+      "orderId": "JNK-5171",
+      "type": "ORDER_CONFIRMATION",
+      "channel": "SMS_OR_WHATSAPP",
+      "recipient": "9876543210",
+      "status": "LOGGED_PENDING_GATEWAY",
+      "createdAt": "2026-11-04T07:38:09.983Z",
+      "message": "Order #JNK-5171 received at Jonak Hotel & Restaurant. Total: Rs 350."
+    },
+    {
+      "eventId": "evt_1793777889984_d5810b14",
+      "type": "order.created",
+      "status": "published",
+      "schemaVersion": 1,
+      "aggregate": {
+        "type": "order",
+        "id": "JNK-5171",
+        "version": 1
+      },
+      "recipient": {
+        "kind": "user",
+        "id": "9876543210"
+      },
+      "data": {
+        "orderId": "JNK-5171",
+        "customerName": "Test Customer",
+        "total": 350,
+        "mode": "Home Delivery",
+        "status": "Received",
+        "createdAt": "2026-11-04T07:38:09.983Z"
+      },
+      "occurredAt": "2026-11-04T07:38:09.984Z",
+      "publishedAt": "2026-11-04T07:38:09.985Z",
+      "deliveryCount": 0
+    },
     {
       "id": "notif_1793722446750",
       "orderId": "JNK-7672",
@@ -4737,6 +5027,50 @@
       "connectedSocketsReached": 0,
       "attemptedAt": "2026-11-03T16:14:06.727Z",
       "deliveredAt": "2026-11-03T16:14:06.727Z"
+    },
+    {
+      "attemptId": "att_618fa350-def4-4673-9b44-73c55856eaca",
+      "eventId": "evt_1793777889984_d5810b14",
+      "type": "order.created",
+      "recipient": "9876543210",
+      "channel": "WEBSOCKET",
+      "status": "in_app_visible",
+      "connectedSocketsReached": 0,
+      "attemptedAt": "2026-11-04T07:38:09.985Z",
+      "deliveredAt": "2026-11-04T07:38:09.985Z"
+    },
+    {
+      "attemptId": "att_5a6b42be-0095-403e-91e1-bb9eeb9b84e8",
+      "eventId": "evt_1793777890042_8a8dae32",
+      "type": "booking.requested",
+      "recipient": "9876543210",
+      "channel": "WEBSOCKET",
+      "status": "in_app_visible",
+      "connectedSocketsReached": 0,
+      "attemptedAt": "2026-11-04T07:38:10.042Z",
+      "deliveredAt": "2026-11-04T07:38:10.042Z"
+    },
+    {
+      "attemptId": "att_f54c93ee-e7cc-4ae8-8a2e-f3847a4d498b",
+      "eventId": "evt_1793778073630_3c0ec4bb",
+      "type": "order.created",
+      "recipient": "9876543210",
+      "channel": "WEBSOCKET",
+      "status": "in_app_visible",
+      "connectedSocketsReached": 0,
+      "attemptedAt": "2026-11-04T07:41:13.630Z",
+      "deliveredAt": "2026-11-04T07:41:13.630Z"
+    },
+    {
+      "attemptId": "att_aa63e128-e098-4063-bf57-bc3370273375",
+      "eventId": "evt_1793778073686_ae46ef61",
+      "type": "booking.requested",
+      "recipient": "9876543210",
+      "channel": "WEBSOCKET",
+      "status": "in_app_visible",
+      "connectedSocketsReached": 0,
+      "attemptedAt": "2026-11-04T07:41:13.686Z",
+      "deliveredAt": "2026-11-04T07:41:13.686Z"
     }
   ],
   "orderStatusEvents": [
@@ -4963,6 +5297,20 @@
       "status": "Received",
       "note": "Order registered server-side",
       "createdAt": "2026-11-03T16:14:06.727Z"
+    },
+    {
+      "id": "ose_1793777889984_0a845c",
+      "orderId": "JNK-5171",
+      "status": "Received",
+      "note": "Order registered server-side",
+      "createdAt": "2026-11-04T07:38:09.983Z"
+    },
+    {
+      "id": "ose_1793778073630_b55e42",
+      "orderId": "JNK-9853",
+      "status": "Received",
+      "note": "Order registered server-side",
+      "createdAt": "2026-11-04T07:41:13.630Z"
     }
   ],
   "staff": [
@@ -5691,12 +6039,12 @@
       "id": "CUST-9876543210",
       "name": "Test Guest",
       "phone": "9876543210",
-      "address": "Near Barpeta Satra, Barpeta",
-      "totalOrders": 8,
-      "totalStays": 3,
+      "address": "Donakuchi",
+      "totalOrders": 10,
+      "totalStays": 5,
       "totalEvents": 0,
-      "totalSpend": 21220,
-      "lastVisitDate": "2026-11-03T16:14:06.647Z",
+      "totalSpend": 44320,
+      "lastVisitDate": "2026-11-04T07:41:13.686Z",
       "customerType": "👑 VIP Guest"
     },
     {
@@ -5720,7 +6068,7 @@
       "totalStays": 1,
       "totalEvents": 0,
       "totalSpend": 5998,
-      "lastVisitDate": "2026-11-03T16:14:06.750Z",
+      "lastVisitDate": "2026-11-04T07:41:13.686Z",
       "customerType": "⭐ Frequent Diner"
     },
     {
@@ -5732,7 +6080,7 @@
       "totalStays": 1,
       "totalEvents": 0,
       "totalSpend": 3998,
-      "lastVisitDate": "2026-11-03T16:14:06.750Z",
+      "lastVisitDate": "2026-11-04T07:41:13.686Z",
       "customerType": "⭐ Frequent Diner"
     },
     {
@@ -5756,7 +6104,7 @@
       "totalStays": 0,
       "totalEvents": 0,
       "totalSpend": 620,
-      "lastVisitDate": "2026-11-03T16:14:06.750Z",
+      "lastVisitDate": "2026-11-04T07:41:13.686Z",
       "customerType": "🌱 New Customer"
     },
     {
@@ -5768,11 +6116,11 @@
       "totalStays": 0,
       "totalEvents": 0,
       "totalSpend": 610,
-      "lastVisitDate": "2026-11-03T16:14:06.750Z",
+      "lastVisitDate": "2026-11-04T07:41:13.686Z",
       "customerType": "🌱 New Customer"
     }
   ],
-  "version": 1793722446750,
+  "version": 1793778073740,
   "users": [
     {
       "id": "usr_owner_001",

@@ -2,6 +2,8 @@
  * Real-Time WebSocket Client with Cursor Reconciliation & Event Deduplication
  */
 
+import { getWsUrl } from '../config/apiConfig.js';
+
 class RealtimeClient {
   constructor() {
     this.ws = null;
@@ -18,17 +20,7 @@ class RealtimeClient {
   }
 
   getWebSocketUrl() {
-    if (typeof window === 'undefined') return 'ws://localhost:5000/ws';
-
-    const isSecure = window.location.protocol === 'https:';
-    const protocol = isSecure ? 'wss:' : 'ws:';
-    
-    // In dev environment where Vite runs on 3000/5173 and backend on 5000
-    const host = window.location.port === '3000' || window.location.port === '5173'
-      ? `${window.location.hostname}:5000`
-      : window.location.host;
-
-    return `${protocol}//${host}/ws`;
+    return getWsUrl();
   }
 
   connect() {
