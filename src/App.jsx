@@ -1,17 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useHotel } from './context/HotelContext';
-import { Navbar } from './components/Navbar';
-import { Hero } from './components/Hero';
-import { MenuSection } from './components/MenuSection';
-import { RoomsSection } from './components/RoomsSection';
-import { EventsSection } from './components/EventsSection';
-import { LandmarksSection } from './components/LandmarksSection';
-import { AboutSection } from './components/AboutSection';
-import { FAQSection } from './components/FAQSection';
-import { Footer } from './components/Footer';
+import { PixelHomepage } from './components/PixelHomepage';
 import { CartDrawer } from './components/CartDrawer';
 import { BookingModal } from './components/BookingModal';
-import { MobileActionDock } from './components/MobileActionDock';
 import { AdminPanel } from './components/AdminPanel';
 import { OrderTrackerModal } from './components/OrderTrackerModal';
 import { CheckCircle2, AlertCircle, Info } from 'lucide-react';
@@ -54,7 +45,7 @@ export function App() {
   return (
     <div className="jonak-app-root">
       
-      {/* View Switch: Owner Command Center vs Customer Luxury Website */}
+      {/* View Switch: Owner Command Center vs Customer Pixel-Accurate Web App */}
       {activeView === 'admin' ? (
         <AdminPanel onExitAdmin={() => {
           setActiveView('home');
@@ -62,52 +53,15 @@ export function App() {
         }} />
       ) : (
         <>
-          {/* Main Navigation */}
-          <Navbar 
+          {/* Pixel-Accurate Mobile-First Homepage */}
+          <PixelHomepage 
             onOpenCart={() => setIsCartOpen(true)}
+            onOpenBookingModal={handleOpenRoomBooking}
             onOpenAdmin={() => {
               setActiveView('admin');
               window.location.hash = 'admin';
             }}
-            activeView={activeView}
-            setActiveView={setActiveView}
-          />
-
-          {/* Hero Section */}
-          <Hero onOpenBookingModal={() => handleOpenRoomBooking(null)} />
-
-          {/* Digital Menu & 5 KM Delivery Engine */}
-          <MenuSection onOpenCart={() => setIsCartOpen(true)} />
-
-          {/* Room Showcase & Booking Flow */}
-          <RoomsSection onSelectRoomForBooking={handleOpenRoomBooking} />
-
-          {/* Events & Open Stage Celebrations */}
-          <EventsSection />
-
-          {/* About Us, Founder's Philosophy & Four Pillars */}
-          <AboutSection />
-
-          {/* Nearby Landmarks Distance Guide */}
-          <LandmarksSection />
-
-          {/* FAQ Accordion */}
-          <FAQSection />
-
-          {/* Footer */}
-          <Footer 
-            onOpenAdmin={() => {
-              setActiveView('admin');
-              window.location.hash = 'admin';
-            }} 
-            setActiveView={setActiveView}
-          />
-
-          {/* Mobile Bottom Dock */}
-          <MobileActionDock 
-            onOpenCart={() => setIsCartOpen(true)}
-            onOpenBookingModal={() => handleOpenRoomBooking(null)}
-            setActiveView={setActiveView}
+            onOpenTracker={() => setIsTrackerOpen(true)}
           />
 
           {/* Cart Drawer */}
