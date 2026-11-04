@@ -12,8 +12,8 @@ export const getApiBaseUrl = () => {
     if (custom && custom !== '/' && !custom.startsWith('http://localhost') && !custom.startsWith('http://127.0.0.1')) {
       return custom.replace(/\/$/, '');
     }
-    // If running in browser and custom is localhost, check if we're on GitHub Pages
-    if (typeof window !== 'undefined' && window.location.hostname.includes('github.io')) {
+    // If running in browser and custom is localhost, check if we're on GitHub Pages or custom domain
+    if (typeof window !== 'undefined' && (window.location.hostname.includes('github.io') || window.location.hostname.includes('jonakhotelgroup.in'))) {
       return RENDER_PROD_BACKEND;
     }
     return custom.replace(/\/$/, '');
@@ -23,8 +23,13 @@ export const getApiBaseUrl = () => {
   if (typeof window !== 'undefined') {
     const { hostname, port } = window.location;
 
-    // Running on GitHub Pages, Vercel, or Netlify -> Must route to Render backend
-    if (hostname.includes('github.io') || hostname.includes('vercel.app') || hostname.includes('netlify.app')) {
+    // Running on GitHub Pages, custom domain, Vercel, or Netlify -> Must route to Render backend
+    if (
+      hostname.includes('github.io') || 
+      hostname.includes('jonakhotelgroup.in') || 
+      hostname.includes('vercel.app') || 
+      hostname.includes('netlify.app')
+    ) {
       return RENDER_PROD_BACKEND;
     }
 
