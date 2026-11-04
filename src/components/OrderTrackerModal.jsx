@@ -1,5 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import './OrderTrackerModal.css';
 import { useHotel } from '../context/HotelContext';
+import confetti from 'canvas-confetti';
 import {
   X,
   Bike,
@@ -14,23 +16,211 @@ import {
   ChefHat,
   RefreshCw,
   Play,
-  RotateCcw
+  Pause,
+  RotateCcw,
+  MessageSquare,
+  Home,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  Heart,
+  Lock,
+  ArrowLeft,
+  HelpCircle,
+  Sparkles,
+  ShoppingBag
 } from 'lucide-react';
 
+// Jonak Hotel Coordinates (BH Road, near NRL Petrol Pump, Donakuchi, Barpeta)
+const RESTAURANT_COORDS = [26.3308, 91.0064];
+
+// Customer Destination Coordinates (Barpeta Town center, ~3.4 KM away)
+const DESTINATION_COORDS = [26.3210, 91.0180];
+
+// Realistic high-resolution waypoints along BH Road toward Barpeta Town
+const ROUTE_WAYPOINTS = [
+  [26.3308, 91.0064], // 0: Jonak Hotel & Restaurant Hub
+  [26.3298, 91.0075], // 1: NRL Petrol Pump Junction
+  [26.3288, 91.0088], // 2: BH Road Southbound
+  [26.3276, 91.0102], // 3: Donakuchi Crossing
+  [26.3263, 91.0118], // 4: Garemara Pathar Approach
+  [26.3252, 91.0132], // 5: Barpeta Bypass Link
+  [26.3241, 91.0145], // 6: Barpeta College Gate
+  [26.3232, 91.0157], // 7: Dakshinhati Road Crossing
+  [26.3221, 91.0169], // 8: Town Approach
+  [26.3210, 91.0180]  // 9: Customer Doorstep
+];
+
+// Calculate bearing angle between two coordinates for vehicle orientation
+function calculateBearing(startLat, startLng, destLat, destLng) {
+  const startLatRad = (startLat * Math.PI) / 180;
+  const startLngRad = (startLng * Math.PI) / 180;
+  const destLatRad = (destLat * Math.PI) / 180;
+  const destLngRad = (destLng * Math.PI) / 180;
+  const y = Math.sin(destLngRad - startLngRad) * Math.cos(destLatRad);
+  const x =
+    Math.cos(startLatRad) * Math.sin(destLatRad) -
+    Math.sin(startLatRad) * Math.cos(destLatRad) * Math.cos(destLngRad - startLngRad);
+  let brng = (Math.atan2(y, x) * 180) / Math.PI;
+  return (brng + 360) % 360;
+}
+
 export const OrderTrackerModal = ({ isOpen, onClose, targetOrderId = null }) => {
-  const { orders, hotelInfo, updateOrderLocation, showToast } = useHotel();
+  const { orders, hotelInfo, showToast } = useHotel();
 
-  // Track by phone or ID search
-  const [searchInput, setSearchInput] = useState('');
-  const [searchedOrderId, setSearchedOrderId] = useState(targetOrderId);
+  // Selected or active order
+  const activeOrder = useMemo(() => {
+    if (targetOrderId) {
+      const found = orders?.find(o => o.id === targetOrderId);
+      if (found) return found;
+    }
+    return orders?.find(o => o.orderType === 'DELIVERY' || o.deliveryAddress) || orders?.[0] || {
+      id: 'JNK-84920',
+      customerName: 'Guest Customer',
+      customerPhone: '9678582286',
+      deliveryAddress: 'BH Road, Barpeta Town (Near Satra)',
+      items: [
+        { name: 'Jonak Special Dum Biryani', qty: 1, price: 350, isVeg: false },
+        { name: 'Butter Naan', qty: 2, price: 40, isVeg: true },
+        { name: 'Jeera Rice', qty: 1, price: 140, isVeg: true }
+      ],
+      total: 570,
+      subtotal: 570,
+      deliveryFee: 0,
+      paymentMethod: 'Paytm UPI (paytm.s1i7is2@pty)'
+    };
+  }, [orders, targetOrderId]);
 
-  // Find target order or latest active delivery order
-  const resolvedOrderId = searchedOrderId || targetOrderId;
-  const activeOrder = orders.find(o => o.id === resolvedOrderId) || 
-                      orders.find(o => o.orderType === 'DELIVERY' || o.deliveryAddress) || 
-                      orders[0];
+  // --------------------------------------------------------------------------
+  // 4-STAGE RECURRING LOOPING STATE MACHINE
+  // --------------------------------------------------------------------------
+  // Phase 1: "Order Confirmed & Preparing Food" (8s)
+  // Phase 2: "Food Ready & Driver Assigned" (8s)
+  // Phase 3: "Out for Delivery & Live Movement" (18s)
+  // Phase 4: "Arrived / Order Delivered" (8s)
+  // Auto-Reset: wait 5s and loop back to Phase 1
+  const [currentPhase, setCurrentPhase] = useState(1);
+  const [isAutoLooping, setIsAutoLooping] = useState(true);
+  const [phaseSecondsLeft, setPhaseSecondsLeft] = useState(8);
+  const [dynamicEtaMinutes, setDynamicEtaMinutes] = useState(30);
 
-  // ESC key + body overflow
+  // Rider position interpolation along route
+  const [riderWaypointIndex, setRiderWaypointIndex] = useState(0);
+  const [riderBearing, setRiderBearing] = useState(135);
+
+  // Interactive UI states
+  const [isAccordionOpen, setIsAccordionOpen] = useState(false);
+  const [selectedTip, setSelectedTip] = useState(30);
+  const [leaveAtDoor, setLeaveAtDoor] = useState(false);
+  const [copiedOtp, setCopiedOtp] = useState(false);
+
+  // Map references
+  const mapContainerRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const riderMarkerRef = useRef(null);
+  const routePolylineRef = useRef(null);
+  const traversedPolylineRef = useRef(null);
+
+  // Delivery OTP code
+  const deliveryOtp = useMemo(() => {
+    return '4821';
+  }, []);
+
+  // Delivery captain info
+  const captain = useMemo(() => ({
+    name: 'Rahul Sharma',
+    rating: 4.9,
+    trips: '840+ deliveries',
+    phone: '+91 88760 55667',
+    vehicle: 'Hero Splendor • AS-15-H-4821',
+    vaccinated: true
+  }), []);
+
+  // --------------------------------------------------------------------------
+  // STATE MACHINE TIMER & DYNAMIC TRANSITIONS
+  // --------------------------------------------------------------------------
+  useEffect(() => {
+    if (!isOpen || !isAutoLooping) return;
+
+    let timer;
+
+    if (currentPhase === 1) {
+      setDynamicEtaMinutes(32);
+      setRiderWaypointIndex(0);
+      setPhaseSecondsLeft(8);
+
+      timer = setTimeout(() => {
+        setCurrentPhase(2);
+      }, 8000);
+
+    } else if (currentPhase === 2) {
+      setDynamicEtaMinutes(22);
+      setRiderWaypointIndex(0);
+      setPhaseSecondsLeft(8);
+
+      timer = setTimeout(() => {
+        setCurrentPhase(3);
+      }, 8000);
+
+    } else if (currentPhase === 3) {
+      setPhaseSecondsLeft(18);
+
+      // Animate rider along the waypoints over 18 seconds
+      let step = 0;
+      const stepInterval = setInterval(() => {
+        step += 1;
+        if (step < ROUTE_WAYPOINTS.length) {
+          setRiderWaypointIndex(step);
+          // Decrease ETA dynamically from 15 mins to 1 min
+          const remainingMinutes = Math.max(1, Math.round(15 - (step / ROUTE_WAYPOINTS.length) * 14));
+          setDynamicEtaMinutes(remainingMinutes);
+
+          // Calculate bearing to next point
+          const prev = ROUTE_WAYPOINTS[step - 1];
+          const curr = ROUTE_WAYPOINTS[step];
+          const b = calculateBearing(prev[0], prev[1], curr[0], curr[1]);
+          setRiderBearing(b);
+        }
+      }, 1800); // 10 waypoints * 1.8s = 18s
+
+      timer = setTimeout(() => {
+        clearInterval(stepInterval);
+        setCurrentPhase(4);
+      }, 18000);
+
+      return () => {
+        clearInterval(stepInterval);
+        clearTimeout(timer);
+      };
+
+    } else if (currentPhase === 4) {
+      setDynamicEtaMinutes(0);
+      setRiderWaypointIndex(ROUTE_WAYPOINTS.length - 1);
+      setPhaseSecondsLeft(8);
+
+      // Trigger celebration confetti
+      try {
+        confetti({
+          particleCount: 50,
+          spread: 80,
+          origin: { y: 0.5 }
+        });
+      } catch {}
+
+      // Wait 8s in Delivered phase, then 5s fade & reset loop back to Phase 1
+      timer = setTimeout(() => {
+        if (typeof showToast === 'function') {
+          showToast('🔄 Demo Cycle: Restarting live order journey from Phase 1', 'info');
+        }
+        setCurrentPhase(1);
+      }, 13000);
+    }
+
+    return () => clearTimeout(timer);
+  }, [isOpen, currentPhase, isAutoLooping, showToast]);
+
+  // Global ESC key listener & body scroll lock
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isOpen) onClose();
@@ -45,654 +235,663 @@ export const OrderTrackerModal = ({ isOpen, onClose, targetOrderId = null }) => 
     };
   }, [isOpen, onClose]);
 
-  // Handle search by order ID or phone
-  const handleSearch = () => {
-    const q = searchInput.trim();
-    if (!q) return;
-    // Search by order ID
-    const byId = orders.find(o => o.id?.toLowerCase() === q.toLowerCase());
-    // Search by phone
-    const byPhone = orders.find(o => (o.phone || o.customerPhone || o.customer_phone || '')
-      .replace(/\D/g, '').endsWith(q.replace(/\D/g, '')));
-    if (byId) {
-      setSearchedOrderId(byId.id);
-      showToast(`📦 Found order #${byId.id}`, 'success');
-    } else if (byPhone) {
-      setSearchedOrderId(byPhone.id);
-      showToast(`📦 Found order #${byPhone.id} for this phone`, 'success');
-    } else {
-      showToast('No order found. Try your Order ID (e.g. JNK-1234) or phone number.', 'danger');
-    }
-  };
-
-  const mapContainerRef = useRef(null);
-  const mapInstanceRef = useRef(null);
-  const bikeMarkerRef = useRef(null);
-  const routePolylineRef = useRef(null);
-  const simIntervalRef = useRef(null);
-
-  const [simStep, setSimStep] = useState(0);
-  const [isSimulating, setIsSimulating] = useState(false);
-
-  // Jonak Hotel Coordinates (BH Road, Donakuchi, Barpeta)
-  const hotelLat = 26.3308;
-  const hotelLng = 91.0064;
-
-  // Destination coordinates (default to Barpeta Town ~3.4 KM away)
-  const destLat = activeOrder?.customerCoordinates?.lat || 26.3210;
-  const destLng = activeOrder?.customerCoordinates?.lng || 91.0180;
-
-  // Waypoints for road route polyline from Jonak Hotel to Destination
-  const routeWaypoints = [
-    [hotelLat, hotelLng], // Jonak Hotel Hub
-    [26.3290, 91.0085], // BH Road Junction
-    [26.3265, 91.0115], // Donakuchi Crossing
-    [26.3240, 91.0145], // Barpeta College Gate
-    [destLat, destLng]   // Customer Address
-  ];
-
-  // Rider coordinates: from active order or simulated waypoint
-  const currentRiderPos = activeOrder?.currentLocation?.lat && activeOrder?.currentLocation?.lng
-    ? [activeOrder.currentLocation.lat, activeOrder.currentLocation.lng]
-    : routeWaypoints[simStep % routeWaypoints.length];
-
-  // 5-Stage Milestone Progress mapping
-  const getStageIndex = (status) => {
-    switch ((status || '').toLowerCase()) {
-      case 'new':
-      case 'pending':
-        return 1;
-      case 'confirmed':
-      case 'accepted':
-        return 2;
-      case 'cooking':
-      case 'in prep':
-        return 3;
-      case 'out for delivery':
-      case 'on the way':
-        return 4;
-      case 'delivered':
-      case 'completed':
-        return 5;
-      default:
-        return 3;
-    }
-  };
-
-  const currentStage = getStageIndex(activeOrder?.status);
-
-  // Initialize Leaflet Map
-  useEffect(() => {
-    if (!isOpen || !mapContainerRef.current) return;
-
+  // --------------------------------------------------------------------------
+  // LEAFLET MAP INITIALIZATION & RESIZE GUARDS
+  // --------------------------------------------------------------------------
+  const initMap = useCallback(() => {
+    if (!mapContainerRef.current) return;
     if (!window.L) {
-      console.warn('Leaflet library is loading...');
+      console.warn('Leaflet window.L not ready yet.');
       return;
     }
 
-    // Clean up previous instance if any
+    // Clean up existing map instance
     if (mapInstanceRef.current) {
       mapInstanceRef.current.remove();
       mapInstanceRef.current = null;
     }
 
+    const L = window.L;
+
     try {
-      const L = window.L;
       const map = L.map(mapContainerRef.current, {
-        center: [hotelLat, hotelLng],
+        center: [26.3259, 91.0122],
         zoom: 14,
-        zoomControl: true
+        zoomControl: false,
+        attributionControl: false
       });
       mapInstanceRef.current = map;
 
-      // OpenStreetMap Tiles with sleek modern styling
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors',
-        maxZoom: 18
+      // Add Zoom control bottom right
+      L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+      // High-performance OpenStreetMap CartoDB Dark/Voyager tiles
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        subdomains: 'abcd'
       }).addTo(map);
 
-      // 1. Jonak Hotel Hub Marker (Custom Gold Icon)
-      const hotelIcon = L.divIcon({
-        className: 'custom-hotel-marker',
+      // 1. Restaurant Marker (Custom Gold & Teal Crest with Radar Pulse)
+      const restaurantIcon = L.divIcon({
+        className: 'custom-restaurant-icon-wrapper',
         html: `
-          <div style="background: #D4AF37; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 15px rgba(212, 175, 55, 0.8); border: 2px solid #FFFFFF;">
-            <span style="font-size: 18px;">🏨</span>
+          <div class="jonak-map-marker-restaurant">
+            <span style="font-size: 20px;">🏨</span>
+            <div class="jonak-pulse-ring"></div>
           </div>
         `,
-        iconSize: [38, 38],
-        iconAnchor: [19, 19]
+        iconSize: [44, 44],
+        iconAnchor: [22, 22]
       });
 
-      L.marker([hotelLat, hotelLng], { icon: hotelIcon })
+      L.marker(RESTAURANT_COORDS, { icon: restaurantIcon })
         .addTo(map)
-        .bindPopup(`<strong>🏨 Jonak Hotel & Restaurant</strong><br/>BH Road, Donakuchi, Barpeta<br/><em>Kitchen Dispatch Center</em>`)
-        .openPopup();
+        .bindPopup(`<strong>🏨 Jonak Hotel & Restaurant</strong><br/>BH Road, Donakuchi, Barpeta<br/><em>Kitchen Dispatch Hub</em>`);
 
-      // 2. 5 KM Free Delivery Radius Circle
-      L.circle([hotelLat, hotelLng], {
+      // 2. 5 KM Free Delivery Coverage Circle
+      L.circle(RESTAURANT_COORDS, {
         radius: 5000,
         color: '#D4AF37',
-        fillColor: '#D4AF37',
-        fillOpacity: 0.08,
+        fillColor: '#003838',
+        fillOpacity: 0.06,
         weight: 1.5,
-        dashArray: '6, 6'
+        dashArray: '5, 8'
       }).addTo(map);
 
-      // 3. Customer Destination Marker
+      // 3. Customer Destination Marker (Home Icon with Radar Pulse)
       const destIcon = L.divIcon({
-        className: 'custom-dest-marker',
+        className: 'custom-dest-icon-wrapper',
         html: `
-          <div style="background: #EF4444; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 12px rgba(239, 68, 68, 0.8); border: 2px solid #FFFFFF;">
-            <span style="font-size: 16px;">📍</span>
+          <div class="jonak-map-marker-dest">
+            <span style="font-size: 20px;">🏠</span>
+            <div class="jonak-pulse-ring-dest"></div>
           </div>
         `,
-        iconSize: [34, 34],
-        iconAnchor: [17, 17]
+        iconSize: [42, 42],
+        iconAnchor: [21, 21]
       });
 
-      L.marker([destLat, destLng], { icon: destIcon })
+      L.marker(DESTINATION_COORDS, { icon: destIcon })
         .addTo(map)
-        .bindPopup(`<strong>📍 Customer Delivery Point</strong><br/>${activeOrder?.deliveryAddress || 'Barpeta Town'}`);
+        .bindPopup(`<strong>📍 Your Delivery Address</strong><br/>${activeOrder?.deliveryAddress || 'Barpeta Town'}`);
 
-      // 4. Uber H3 Spatial Grid Overlay (Simulated Barpeta Delivery Hexagons)
-      const h3Hexagons = [
-        // Zone 1: Donakuchi Hub (H3 Index 886194b633fffff)
-        [[26.335, 91.002], [26.338, 91.010], [26.333, 91.017], [26.326, 91.016], [26.324, 91.007], [26.329, 91.000]],
-        // Zone 2: Barpeta Town Center
-        [[26.325, 91.012], [26.328, 91.020], [26.323, 91.027], [26.316, 91.025], [26.314, 91.017], [26.319, 91.010]],
-        // Zone 3: FAAMCH Medical Corridor
-        [[26.318, 91.022], [26.321, 91.030], [26.316, 91.037], [26.309, 91.035], [26.307, 91.027], [26.312, 91.020]]
-      ];
-
-      h3Hexagons.forEach((hex, i) => {
-        L.polygon(hex, {
-          color: '#10B981',
-          weight: 1,
-          fillColor: '#10B981',
-          fillOpacity: 0.05,
-          dashArray: '3, 5'
-        }).addTo(map);
-      });
-
-      // 5. Road Route Polyline
-      const polyline = L.polyline(routeWaypoints, {
+      // 4. Base Route Polyline (Gold dashed guide)
+      const baseRoute = L.polyline(ROUTE_WAYPOINTS, {
         color: '#D4AF37',
         weight: 4,
-        opacity: 0.85
+        opacity: 0.5,
+        dashArray: '6, 8'
       }).addTo(map);
-      routePolylineRef.current = polyline;
+      routePolylineRef.current = baseRoute;
 
-      // 6. Moving Rider Bike Marker
+      // 5. Dynamic Traversed Polyline (Bright Emerald Green)
+      const traversed = L.polyline([RESTAURANT_COORDS], {
+        color: '#10B981',
+        weight: 5,
+        opacity: 0.95
+      }).addTo(map);
+      traversedPolylineRef.current = traversed;
+
+      // 6. Delivery Rider Marker (Custom 2-Wheeler Bike Icon with Bearing Rotation)
+      const initialPos = ROUTE_WAYPOINTS[0];
       const bikeIcon = L.divIcon({
-        className: 'custom-bike-marker',
+        className: 'custom-bike-icon-wrapper',
         html: `
-          <div style="background: #10B981; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 15px rgba(16, 185, 129, 0.9); border: 2.5px solid #FFFFFF; animation: pulse 1.8s infinite;">
-            <span style="font-size: 20px;">🛵</span>
+          <div id="jonak-bike-marker-inner" class="jonak-map-marker-bike" style="transform: rotate(${riderBearing}deg);">
+            <span style="font-size: 22px;">🛵</span>
           </div>
         `,
-        iconSize: [40, 40],
-        iconAnchor: [20, 20]
+        iconSize: [46, 46],
+        iconAnchor: [23, 23]
       });
 
-      const bikeMarker = L.marker(currentRiderPos, { icon: bikeIcon })
-        .addTo(map)
-        .bindPopup(`<strong>🛵 Monojit Roy (Delivery Captain)</strong><br/>Speed: 28 km/h • ETA: ~18 mins`);
-      bikeMarkerRef.current = bikeMarker;
+      const riderMarker = L.marker(initialPos, { icon: bikeIcon, zIndexOffset: 1000 }).addTo(map);
+      riderMarker.bindPopup(`<strong>🛵 Rahul Sharma</strong><br/>Speed: 28 km/h • Hero Splendor`);
+      riderMarkerRef.current = riderMarker;
 
-      // Fit bounds to show route nicely
-      map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
+      // Fit bounds to display both points nicely
+      map.fitBounds(baseRoute.getBounds(), { padding: [50, 50] });
+
+      // Invalidate size across multiple render passes to prevent blank tiles on Safari/Mobile Chrome
+      [100, 300, 600, 1000].forEach(delay => {
+        setTimeout(() => {
+          if (mapInstanceRef.current) {
+            mapInstanceRef.current.invalidateSize();
+          }
+        }, delay);
+      });
 
     } catch (err) {
-      console.error('Error initializing Leaflet map:', err);
+      console.error('Error initializing live tracking Leaflet map:', err);
     }
+  }, [activeOrder?.deliveryAddress, riderBearing]);
 
-    return () => {
-      if (simIntervalRef.current) clearInterval(simIntervalRef.current);
-    };
-  }, [isOpen, activeOrder?.id]);
-
-  // Update bike position when coordinates change
+  // Mount map when modal opens
   useEffect(() => {
-    if (bikeMarkerRef.current && currentRiderPos) {
-      bikeMarkerRef.current.setLatLng(currentRiderPos);
+    if (isOpen) {
+      // Small timeout ensures DOM elements have rendered explicit dimensions
+      const timer = setTimeout(() => {
+        initMap();
+      }, 80);
+      return () => clearTimeout(timer);
     }
-  }, [currentRiderPos]);
+  }, [isOpen, initMap]);
 
-  // Simulation: Move delivery bike along route step-by-step
-  const toggleSimulation = () => {
-    if (isSimulating) {
-      clearInterval(simIntervalRef.current);
-      setIsSimulating(false);
-      showToast('Live GPS broadcast simulation paused.', 'info');
-    } else {
-      setIsSimulating(true);
-      showToast('🛵 Live GPS broadcast started! Watch delivery bike move on map.', 'success');
-      
-      let step = simStep;
-      simIntervalRef.current = setInterval(() => {
-        step = (step + 1) % routeWaypoints.length;
-        setSimStep(step);
-        const nextCoord = routeWaypoints[step];
+  // Handle window resize for map
+  useEffect(() => {
+    const handleResize = () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.invalidateSize();
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
-        // Broadcast to server if order exists
-        if (activeOrder?.id && updateOrderLocation) {
-          updateOrderLocation(activeOrder.id, {
-            lat: nextCoord[0],
-            lng: nextCoord[1],
-            speed: 26,
-            heading: 45
-          });
-        }
-      }, 3000);
+  // Recenter map bounds on demand
+  const handleRecenter = () => {
+    if (mapInstanceRef.current && routePolylineRef.current) {
+      mapInstanceRef.current.fitBounds(routePolylineRef.current.getBounds(), { padding: [50, 50] });
+      mapInstanceRef.current.invalidateSize();
+      if (typeof showToast === 'function') {
+        showToast('📍 Route view centered', 'info');
+      }
+    }
+  };
+
+  // Update rider position and traversed polyline on map as waypoint changes
+  useEffect(() => {
+    if (!riderMarkerRef.current || !mapInstanceRef.current) return;
+
+    const currentCoord = ROUTE_WAYPOINTS[riderWaypointIndex] || ROUTE_WAYPOINTS[0];
+    riderMarkerRef.current.setLatLng(currentCoord);
+
+    // Update bearing rotation
+    const bikeInnerEl = document.getElementById('jonak-bike-marker-inner');
+    if (bikeInnerEl) {
+      bikeInnerEl.style.transform = `rotate(${riderBearing}deg)`;
+    }
+
+    // Update traversed line up to current waypoint
+    if (traversedPolylineRef.current) {
+      const traversedCoords = ROUTE_WAYPOINTS.slice(0, riderWaypointIndex + 1);
+      traversedPolylineRef.current.setLatLngs(traversedCoords);
+    }
+  }, [riderWaypointIndex, riderBearing]);
+
+  // Copy OTP helper
+  const handleCopyOtp = () => {
+    try {
+      navigator.clipboard?.writeText(deliveryOtp);
+      setCopiedOtp(true);
+      if (typeof showToast === 'function') {
+        showToast(`Delivery OTP ${deliveryOtp} copied!`, 'success');
+      }
+      setTimeout(() => setCopiedOtp(false), 2500);
+    } catch {
+      if (typeof showToast === 'function') {
+        showToast(`Delivery OTP is ${deliveryOtp}`, 'info');
+      }
+    }
+  };
+
+  // Manual Phase Jumper for testing/demo
+  const handleJumpToPhase = (phaseNumber) => {
+    setCurrentPhase(phaseNumber);
+    if (phaseNumber === 1) {
+      setRiderWaypointIndex(0);
+      setDynamicEtaMinutes(32);
+    } else if (phaseNumber === 2) {
+      setRiderWaypointIndex(0);
+      setDynamicEtaMinutes(22);
+    } else if (phaseNumber === 3) {
+      setRiderWaypointIndex(4);
+      setDynamicEtaMinutes(12);
+    } else if (phaseNumber === 4) {
+      setRiderWaypointIndex(ROUTE_WAYPOINTS.length - 1);
+      setDynamicEtaMinutes(0);
     }
   };
 
   if (!isOpen) return null;
 
-  // No order found — show search UI
-  if (!activeOrder) return (
-    <div style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      backgroundColor: 'rgba(7, 11, 20, 0.88)', backdropFilter: 'blur(10px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      zIndex: 100000, padding: '1rem'
-    }}
-    onClick={onClose}
-    >
-      <div style={{
-        background: 'var(--bg-card)', border: '1px solid var(--border-color)',
-        borderRadius: 'var(--radius-lg)', width: '100%', maxWidth: '480px',
-        padding: '2rem', textAlign: 'center'
-      }}
-      onClick={e => e.stopPropagation()}
-      >
-        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📦</div>
-        <h3 style={{ color: '#FFFFFF', marginBottom: '0.5rem' }}>Track Your Order</h3>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-          Enter your Order ID (e.g. JNK-1234) or your phone number to track your food delivery.
-        </p>
-        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-          <input
-            type="text"
-            value={searchInput}
-            onChange={e => setSearchInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') handleSearch(); }}
-            placeholder="Order ID or Phone number"
-            style={{
-              flex: 1, padding: '0.75rem 1rem', borderRadius: '8px',
-              border: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.05)',
-              color: '#FFFFFF', fontSize: '0.9rem', outline: 'none'
-            }}
-          />
-          <button
-            onClick={handleSearch}
-            style={{
-              padding: '0.75rem 1.2rem', borderRadius: '8px',
-              background: 'var(--gold-primary)', color: '#1C1C1C',
-              border: 'none', fontWeight: 700, cursor: 'pointer'
-            }}
-          >
-            Track
-          </button>
-        </div>
-        <button
-          onClick={onClose}
-          style={{
-            padding: '0.6rem 1.5rem', borderRadius: '8px',
-            background: 'rgba(255,255,255,0.08)', color: 'var(--text-secondary)',
-            border: '1px solid var(--border-color)', fontWeight: 600, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: '0.4rem', margin: '0 auto'
-          }}
-        >
-          ← Back to Menu
-        </button>
-      </div>
-    </div>
-  );
+  // Phase metadata
+  const phaseConfig = {
+    1: {
+      title: 'Kitchen is preparing your food',
+      subtext: 'Master Chef is cooking with authentic Barpeta spices',
+      badge: 'Order Confirmed',
+      etaText: '28 - 35 mins',
+      progress: 25,
+      icon: ChefHat,
+      color: '#D4AF37'
+    },
+    2: {
+      title: 'Food packed & captain arrived',
+      subtext: 'Rahul Sharma arrived at Jonak Hotel with insulated hot-bag',
+      badge: 'Driver Assigned',
+      etaText: '22 mins',
+      progress: 50,
+      icon: UtensilsCrossed,
+      color: '#3B82F6'
+    },
+    3: {
+      title: 'Rahul is on the way with your order!',
+      subtext: 'Moving via BH Road at 28 km/h • Near Donakuchi Crossing',
+      badge: 'Out for Delivery',
+      etaText: `${dynamicEtaMinutes} mins`,
+      progress: 75,
+      icon: Bike,
+      color: '#10B981'
+    },
+    4: {
+      title: 'Order Delivered! Enjoy your meal 🍽️',
+      subtext: 'Delivered hot & fresh to your doorstep • Thank you!',
+      badge: 'Delivered',
+      etaText: 'Delivered',
+      progress: 100,
+      icon: CheckCircle2,
+      color: '#10B981'
+    }
+  };
+
+  const activePhaseInfo = phaseConfig[currentPhase];
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(7, 11, 20, 0.88)',
-      backdropFilter: 'blur(10px)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 100000,
-      padding: '1rem'
-    }}
-    onClick={onClose}
-    >
-      <div style={{
-        background: 'var(--bg-card)',
-        border: '1px solid var(--border-color)',
-        borderRadius: 'var(--radius-lg)',
-        width: '100%',
-        maxWidth: '850px',
-        maxHeight: '94vh',
-        overflowY: 'auto',
-        boxShadow: 'var(--shadow-premium)',
-        position: 'relative'
-      }}
-      onClick={e => e.stopPropagation()}
-      >
+    <div className="jonak-tracker-overlay" onClick={onClose}>
+      <div className="jonak-tracker-shell" onClick={(e) => e.stopPropagation()}>
 
-        {/* Header */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '1.25rem 1.5rem',
-          borderBottom: '1px solid var(--border-color)',
-          background: 'rgba(212, 175, 55, 0.05)',
-          gap: '1rem'
-        }}>
-          {/* Back button */}
-          <button
-            onClick={onClose}
-            style={{
-              background: 'rgba(255,255,255,0.08)',
-              border: '1px solid var(--border-color)',
-              color: 'var(--text-secondary)',
-              cursor: 'pointer',
-              padding: '0.4rem 0.75rem',
-              borderRadius: '6px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.3rem',
-              fontSize: '0.8rem',
-              fontWeight: 600,
-              flexShrink: 0
-            }}
-          >
-            <RotateCcw size={14} />
-            Back
-          </button>
-          <div style={{ flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <span style={{
-                background: '#10B981',
-                color: '#070B14',
-                fontWeight: 800,
-                fontSize: '0.72rem',
-                padding: '0.2rem 0.5rem',
-                borderRadius: '4px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.3rem'
-              }}>
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#070B14' }} />
-                ZOMATO-STYLE LIVE TRACKING
-              </span>
-              <span style={{ color: 'var(--gold-primary)', fontWeight: 800, fontSize: '1rem' }}>
-                Order #{activeOrder.id}
-              </span>
+        {/* ------------------------------------------------------------------ */}
+        {/* 1. TOP NAVIGATION BAR                                              */}
+        {/* ------------------------------------------------------------------ */}
+        <header className="jonak-tracker-topbar">
+          <div className="jonak-topbar-left">
+            <button
+              type="button"
+              className="jonak-topbar-back-btn"
+              onClick={onClose}
+              aria-label="Back to Website"
+            >
+              <ArrowLeft size={18} />
+            </button>
+            <div className="jonak-topbar-meta">
+              <h2>Jonak Hotel &amp; Restaurant</h2>
+              <p>
+                <span className="jonak-topbar-order-pill">#{activeOrder.id || 'JNK-84920'}</span>
+                <span>• BH Road, Barpeta</span>
+              </p>
             </div>
-            <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
-              Jonak Hotel Dispatch ➔ {activeOrder.deliveryAddress || 'Barpeta Town'}
-            </p>
           </div>
 
-          {/* Search box to switch order */}
-          <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
-            <input
-              type="text"
-              value={searchInput}
-              onChange={e => setSearchInput(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') handleSearch(); }}
-              placeholder="Order ID / Phone"
-              style={{
-                padding: '0.4rem 0.65rem', borderRadius: '6px',
-                border: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.05)',
-                color: '#FFFFFF', fontSize: '0.78rem', outline: 'none', width: '140px'
-              }}
-            />
-            <button
-              onClick={handleSearch}
-              style={{
-                padding: '0.4rem 0.7rem', borderRadius: '6px',
-                background: 'var(--gold-primary)', color: '#1C1C1C',
-                border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '0.78rem'
-              }}
+          <div className="jonak-topbar-right">
+            <a
+              href="tel:+919678582286"
+              className="jonak-help-pill"
+              title="Call Jonak Hotel Reception"
             >
-              🔍
+              <Phone size={13} />
+              <span>Help</span>
+            </a>
+            <button
+              type="button"
+              className="jonak-topbar-close-btn"
+              onClick={onClose}
+              aria-label="Close Tracker"
+            >
+              <X size={22} />
             </button>
           </div>
+        </header>
 
-          <button
-            onClick={onClose}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text-muted)',
-              cursor: 'pointer',
-              padding: '0.4rem',
-              borderRadius: '50%',
-              flexShrink: 0
-            }}
-          >
-            <X size={22} />
-          </button>
-        </div>
+        {/* ------------------------------------------------------------------ */}
+        {/* 2. BODY SPLIT: LEAFLET MAP (LEFT/TOP) & DETAILS SHEET (RIGHT/BOTTOM) */}
+        {/* ------------------------------------------------------------------ */}
+        <div className="jonak-tracker-body">
 
-        {/* 5-Stage Milestone Progress Bar */}
-        <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border-color)', background: 'rgba(0, 0, 0, 0.2)' }}>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            position: 'relative',
-            marginBottom: '0.75rem'
-          }}>
-            {/* Connecting line */}
-            <div style={{
-              position: 'absolute',
-              top: '16px',
-              left: '5%',
-              right: '5%',
-              height: '3px',
-              background: 'rgba(255, 255, 255, 0.1)',
-              zIndex: 1
-            }} />
-            <div style={{
-              position: 'absolute',
-              top: '16px',
-              left: '5%',
-              width: `${((currentStage - 1) / 4) * 90}%`,
-              height: '3px',
-              background: 'linear-gradient(90deg, #D4AF37, #10B981)',
-              zIndex: 2,
-              transition: 'width 0.4s ease'
-            }} />
+          {/* MAP CANVAS */}
+          <section className="jonak-map-wrapper">
+            {/* Map Div with explicit sizing */}
+            <div ref={mapContainerRef} className="jonak-map-canvas" />
 
-            {[
-              { stage: 1, label: 'Order Placed', icon: CheckCircle2 },
-              { stage: 2, label: 'Kitchen Confirmed', icon: UtensilsCrossed },
-              { stage: 3, label: 'Chef Cooking', icon: Flame },
-              { stage: 4, label: 'Out for Delivery', icon: Bike },
-              { stage: 5, label: 'Delivered', icon: ShieldCheck }
-            ].map(st => {
-              const isPast = currentStage >= st.stage;
-              const isCurrent = currentStage === st.stage;
-              const IconComp = st.icon;
+            {/* Branded Live Dispatch Pill (NO Zomato watermark) */}
+            <div className="jonak-map-floating-pill">
+              <span className="jonak-live-indicator-dot" />
+              <div>
+                <div className="jonak-floating-pill-title">JONAK EXPRESS • LIVE GPS</div>
+                <div className="jonak-floating-pill-sub">BH Road ➔ Barpeta Town</div>
+              </div>
+            </div>
 
-              return (
-                <div key={st.stage} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 3, width: '18%' }}>
-                  <div style={{
-                    width: '34px',
-                    height: '34px',
-                    borderRadius: '50%',
-                    background: isPast ? '#10B981' : 'rgba(255, 255, 255, 0.08)',
-                    border: `2px solid ${isCurrent ? '#D4AF37' : isPast ? '#10B981' : 'rgba(255, 255, 255, 0.2)'}`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: isPast ? '#070B14' : 'var(--text-muted)',
-                    boxShadow: isCurrent ? '0 0 10px rgba(212, 175, 55, 0.8)' : 'none',
-                    marginBottom: '0.4rem',
-                    transition: 'all 0.3s ease'
-                  }}>
-                    <IconComp size={16} />
+            {/* Recenter Map Button */}
+            <button
+              type="button"
+              className="jonak-recenter-btn"
+              onClick={handleRecenter}
+              title="Recenter Route"
+              aria-label="Recenter Map"
+            >
+              <Navigation size={18} color="#D4AF37" />
+            </button>
+
+            {/* Continuous Loop & Stage Selector Controls */}
+            <div className="jonak-map-sim-controls">
+              <button
+                type="button"
+                className={`jonak-sim-btn ${isAutoLooping ? 'active' : ''}`}
+                onClick={() => setIsAutoLooping(v => !v)}
+                title={isAutoLooping ? 'Pause 4-Stage Auto Cycle' : 'Resume 4-Stage Auto Cycle'}
+              >
+                {isAutoLooping ? <Pause size={12} /> : <Play size={12} />}
+                <span>{isAutoLooping ? 'Auto-Cycle ON' : 'Paused'}</span>
+              </button>
+
+              {[
+                { phase: 1, label: '1. Prep' },
+                { phase: 2, label: '2. Packed' },
+                { phase: 3, label: '3. On Way' },
+                { phase: 4, label: '4. Delivered' }
+              ].map(p => (
+                <button
+                  key={p.phase}
+                  type="button"
+                  className={`jonak-sim-btn ${currentPhase === p.phase ? 'active' : ''}`}
+                  onClick={() => handleJumpToPhase(p.phase)}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {/* DETAILS & ACTIONS PANEL */}
+          <section className="jonak-details-panel">
+            {/* Grab handle for touch feel */}
+            <span className="jonak-sheet-handle" />
+
+            {/* A. LIVE ETA & PROGRESS BANNER */}
+            <div className="jonak-eta-card">
+              <div className="jonak-eta-top-row">
+                <span className="jonak-eta-badge">
+                  <span className="jonak-live-indicator-dot" style={{ width: '6px', height: '6px' }} />
+                  {activePhaseInfo.badge}
+                </span>
+
+                <div className="jonak-eta-countdown">
+                  <Clock size={16} color="#D4AF37" />
+                  <span className="jonak-eta-time-val">{activePhaseInfo.etaText}</span>
+                  {currentPhase !== 4 && <span className="jonak-eta-time-lbl">ESTIMATED</span>}
+                </div>
+              </div>
+
+              <h3 className="jonak-status-headline">
+                {activePhaseInfo.title}
+              </h3>
+              <p className="jonak-status-subtext">
+                {activePhaseInfo.subtext}
+              </p>
+
+              {/* Progress Bar */}
+              <div className="jonak-progress-bar-track">
+                <div
+                  className="jonak-progress-bar-fill"
+                  style={{ width: `${activePhaseInfo.progress}%` }}
+                />
+              </div>
+
+              {/* 4 Milestone Stepper */}
+              <div className="jonak-stepper-row">
+                {[
+                  { stage: 1, label: 'Placed' },
+                  { stage: 2, label: 'Cooking' },
+                  { stage: 3, label: 'On Way' },
+                  { stage: 4, label: 'Delivered' }
+                ].map(s => {
+                  const isDone = currentPhase > s.stage;
+                  const isCurrent = currentPhase === s.stage;
+                  return (
+                    <div
+                      key={s.stage}
+                      className={`jonak-step-node ${isDone ? 'completed' : isCurrent ? 'current' : ''}`}
+                    >
+                      <div className="jonak-step-dot">
+                        {isDone ? <Check size={12} strokeWidth={3} /> : s.stage}
+                      </div>
+                      <span className="jonak-step-label">{s.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* B. DELIVERY CAPTAIN PROFILE CARD */}
+            <div className="jonak-captain-card">
+              <div className="jonak-captain-header">
+                <div className="jonak-captain-bio">
+                  <div className="jonak-captain-avatar">
+                    <span>🛵</span>
+                    <span className="jonak-captain-verified-badge">
+                      <Check size={10} color="#070B14" strokeWidth={3} />
+                    </span>
                   </div>
-                  <span style={{
-                    fontSize: '0.72rem',
-                    fontWeight: isCurrent ? 800 : 600,
-                    color: isCurrent ? '#FFFFFF' : isPast ? '#10B981' : 'var(--text-muted)',
-                    textAlign: 'center',
-                    lineHeight: 1.2
-                  }}>
-                    {st.label}
+                  <div>
+                    <h4 className="jonak-captain-name">
+                      {captain.name}
+                      <span className="jonak-captain-rating">★ {captain.rating}</span>
+                    </h4>
+                    <p className="jonak-captain-stats">
+                      {captain.trips} • {captain.vehicle}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="jonak-captain-actions">
+                  <a
+                    href={`tel:${captain.phone}`}
+                    className="jonak-captain-btn call"
+                    title={`Call ${captain.name}`}
+                  >
+                    <Phone size={16} />
+                  </a>
+                  <a
+                    href={`https://wa.me/919678582286?text=${encodeURIComponent(`Hello Rahul, I am tracking Order #${activeOrder.id}. Please deliver safely!`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="jonak-captain-btn"
+                    title="Send WhatsApp Message"
+                  >
+                    <MessageSquare size={16} />
+                  </a>
+                </div>
+              </div>
+
+              {/* Safety Pill */}
+              <div className="jonak-safety-pill">
+                <ShieldCheck size={15} color="#10B981" />
+                <span>Rider temperature verified (98.2°F) • Sanitized helmet &amp; thermal bag</span>
+              </div>
+
+              {/* Quick Tip Selector */}
+              <div className="jonak-tip-section">
+                <div className="jonak-tip-label">
+                  <span>Tip your delivery captain</span>
+                  <span style={{ color: '#D4AF37' }}>
+                    {selectedTip > 0 ? `₹${selectedTip} added` : 'Optional'}
                   </span>
                 </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Leaflet Map Canvas */}
-        <div style={{ position: 'relative', width: '100%', height: '320px' }}>
-          <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />
-
-          {/* Floating ETA Badge */}
-          <div style={{
-            position: 'absolute',
-            top: '12px',
-            right: '12px',
-            background: 'rgba(7, 11, 20, 0.88)',
-            backdropFilter: 'blur(8px)',
-            border: '1px solid var(--gold-primary)',
-            borderRadius: '8px',
-            padding: '0.6rem 1rem',
-            zIndex: 1000,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.6rem'
-          }}>
-            <Clock size={18} color="var(--gold-primary)" />
-            <div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>ESTIMATED TIME</div>
-              <div style={{ fontSize: '1rem', fontWeight: 800, color: '#FFFFFF' }}>18 - 25 Mins</div>
-            </div>
-          </div>
-
-          {/* Floating Simulation Trigger Button */}
-          <button
-            onClick={toggleSimulation}
-            style={{
-              position: 'absolute',
-              bottom: '12px',
-              left: '12px',
-              background: isSimulating ? '#EF4444' : '#10B981',
-              color: '#FFFFFF',
-              border: 'none',
-              borderRadius: '6px',
-              padding: '0.5rem 0.85rem',
-              fontWeight: 700,
-              fontSize: '0.78rem',
-              cursor: 'pointer',
-              zIndex: 1000,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
-            }}
-          >
-            {isSimulating ? <RotateCcw size={14} /> : <Play size={14} />}
-            <span>{isSimulating ? 'Pause GPS Sim' : 'Simulate Bike Moving'}</span>
-          </button>
-        </div>
-
-        {/* Delivery Captain & Order Details */}
-        <div style={{
-          padding: '1.25rem 1.5rem',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-          gap: '1.25rem',
-          background: 'rgba(0, 0, 0, 0.15)'
-        }}>
-
-          {/* Captain Card */}
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.03)',
-            border: '1px solid var(--border-color)',
-            borderRadius: '8px',
-            padding: '1rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-              <div style={{
-                width: '46px',
-                height: '46px',
-                borderRadius: '50%',
-                background: 'rgba(212, 175, 55, 0.15)',
-                border: '2px solid var(--gold-primary)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '1.3rem'
-              }}>
-                🛵
-              </div>
-              <div>
-                <div style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '0.95rem' }}>
-                  Monojit Roy
-                </div>
-                <div style={{ fontSize: '0.75rem', color: '#10B981', fontWeight: 600 }}>
-                  4.9 ★ Verified Delivery Captain
-                </div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                  Honda Activa (AS-15-B-1286)
+                <div className="jonak-tip-chips">
+                  {[20, 30, 50].map(amt => (
+                    <button
+                      key={amt}
+                      type="button"
+                      className={`jonak-tip-chip ${selectedTip === amt ? 'active' : ''}`}
+                      onClick={() => {
+                        const newTip = selectedTip === amt ? 0 : amt;
+                        setSelectedTip(newTip);
+                        if (newTip > 0 && typeof showToast === 'function') {
+                          showToast(`❤️ Added ₹${newTip} tip for ${captain.name}!`, 'success');
+                        }
+                      }}
+                    >
+                      + ₹{amt}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    className={`jonak-tip-chip ${selectedTip === 100 ? 'active' : ''}`}
+                    onClick={() => {
+                      setSelectedTip(selectedTip === 100 ? 0 : 100);
+                      if (typeof showToast === 'function') {
+                        showToast(`❤️ Generous ₹100 tip for ${captain.name}!`, 'success');
+                      }
+                    }}
+                  >
+                    + ₹100
+                  </button>
                 </div>
               </div>
             </div>
 
-            <a
-              href="tel:+918876055667"
-              className="btn btn-secondary btn-sm"
+            {/* C. OTP VERIFICATION BOX */}
+            <div className="jonak-otp-card">
+              <div className="jonak-otp-left">
+                <div className="jonak-otp-icon-wrap">
+                  <Lock size={18} />
+                </div>
+                <div>
+                  <p className="jonak-otp-title">DELIVERY VERIFICATION OTP</p>
+                  <p className="jonak-otp-sub">Share with rider only after receiving food</p>
+                </div>
+              </div>
+
+              <div
+                className="jonak-otp-code-box"
+                onClick={handleCopyOtp}
+                title="Click to copy OTP"
+                style={{ cursor: 'pointer' }}
+              >
+                {copiedOtp ? 'COPIED!' : deliveryOtp}
+              </div>
+            </div>
+
+            {/* D. DELIVERY ADDRESS & SAFETY NOTE */}
+            <div className="jonak-address-card">
+              <div className="jonak-address-row">
+                <MapPin size={18} color="#D4AF37" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <div className="jonak-address-text">
+                  <strong>Delivering to:</strong>
+                  <span>{activeOrder.deliveryAddress || 'BH Road, Barpeta Town, Assam 781314'}</span>
+                </div>
+              </div>
+
+              {/* Leave at Door Switch */}
+              <label className="jonak-door-toggle">
+                <span>Leave order at the door / contactless handover</span>
+                <div className="jonak-switch">
+                  <input
+                    type="checkbox"
+                    checked={leaveAtDoor}
+                    onChange={(e) => {
+                      setLeaveAtDoor(e.target.checked);
+                      if (typeof showToast === 'function') {
+                        showToast(e.target.checked ? '🚪 Contactless handover selected' : 'Direct delivery handover', 'info');
+                      }
+                    }}
+                  />
+                  <span className="jonak-slider" />
+                </div>
+              </label>
+            </div>
+
+            {/* E. ORDER SUMMARY ACCORDION */}
+            <div className="jonak-order-accordion">
+              <div
+                className="jonak-accordion-header"
+                onClick={() => setIsAccordionOpen(v => !v)}
+              >
+                <div className="jonak-accordion-header-left">
+                  <ShoppingBag size={16} color="#D4AF37" />
+                  <span className="jonak-accordion-title">
+                    Order Summary ({activeOrder.items?.length || 3} items)
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span className="jonak-accordion-badge">₹{activeOrder.total || 570}</span>
+                  {isAccordionOpen ? <ChevronUp size={16} color="#94A3B8" /> : <ChevronDown size={16} color="#94A3B8" />}
+                </div>
+              </div>
+
+              {isAccordionOpen && (
+                <div className="jonak-accordion-content">
+                  {(activeOrder.items || [
+                    { name: 'Jonak Special Dum Biryani', qty: 1, price: 350, isVeg: false },
+                    { name: 'Butter Naan', qty: 2, price: 40, isVeg: true },
+                    { name: 'Jeera Rice', qty: 1, price: 140, isVeg: true }
+                  ]).map((item, idx) => (
+                    <div key={idx} className="jonak-order-item-row">
+                      <div className="jonak-order-item-left">
+                        <span className={item.isVeg ? 'jonak-veg-dot' : 'jonak-nonveg-dot'} />
+                        <span style={{ color: '#FFFFFF' }}>
+                          {item.name} <span style={{ color: '#94A3B8' }}>x{item.qty || 1}</span>
+                        </span>
+                      </div>
+                      <span style={{ fontWeight: 700, color: '#FFFFFF' }}>
+                        ₹{item.price * (item.qty || 1)}
+                      </span>
+                    </div>
+                  ))}
+
+                  <div className="jonak-bill-summary">
+                    <div className="jonak-bill-row">
+                      <span>Item Subtotal</span>
+                      <span>₹{activeOrder.subtotal || 570}</span>
+                    </div>
+                    <div className="jonak-bill-row">
+                      <span>Delivery Fee (Within 5 KM)</span>
+                      <span style={{ color: '#10B981', fontWeight: 700 }}>FREE (₹0)</span>
+                    </div>
+                    {selectedTip > 0 && (
+                      <div className="jonak-bill-row">
+                        <span>Captain Tip</span>
+                        <span>₹{selectedTip}</span>
+                      </div>
+                    )}
+                    <div className="jonak-bill-row total">
+                      <span>Grand Total</span>
+                      <span style={{ color: '#D4AF37' }}>
+                        ₹{(Number(activeOrder.total) || 570) + selectedTip}
+                      </span>
+                    </div>
+                    <div style={{ marginTop: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span className="jonak-paid-tag">
+                        <Check size={12} strokeWidth={3} /> Paid via Paytm UPI (paytm.s1i7is2@pty)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Back to Home Button at bottom of details panel */}
+            <button
+              type="button"
+              className="jonak-sim-btn"
+              onClick={onClose}
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-                textDecoration: 'none'
+                width: '100%',
+                padding: '0.75rem',
+                justifyContent: 'center',
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                color: '#CBD5E1',
+                fontSize: '0.85rem'
               }}
             >
-              <Phone size={14} />
-              <span>Call</span>
-            </a>
-          </div>
+              <ArrowLeft size={16} />
+              <span>Back to Restaurant Menu</span>
+            </button>
 
-          {/* Delivery Location & Bill Summary */}
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.03)',
-            border: '1px solid var(--border-color)',
-            borderRadius: '8px',
-            padding: '1rem',
-            fontSize: '0.82rem'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-              <span style={{ color: 'var(--text-muted)' }}>Delivery Address:</span>
-              <span style={{ fontWeight: 700, color: '#FFFFFF', textAlign: 'right' }}>
-                {activeOrder.deliveryAddress || 'Barpeta Town (Within 5 KM)'}
-              </span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-              <span style={{ color: 'var(--text-muted)' }}>Order Total:</span>
-              <span style={{ fontWeight: 800, color: 'var(--gold-primary)', fontSize: '1rem' }}>
-                ₹{activeOrder.total || '380'}
-              </span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--text-muted)' }}>Payment Mode:</span>
-              <span style={{ color: '#10B981', fontWeight: 700 }}>
-                {activeOrder.paymentMethod || 'Paytm UPI (paytm.s1i7is2@pty)'}
-              </span>
-            </div>
-          </div>
+          </section>
+
         </div>
 
       </div>
@@ -700,3 +899,4 @@ export const OrderTrackerModal = ({ isOpen, onClose, targetOrderId = null }) => 
   );
 };
 
+export default OrderTrackerModal;

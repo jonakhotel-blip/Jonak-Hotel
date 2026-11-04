@@ -1,0 +1,991 @@
+/* ==========================================================================
+   JONAK HOTEL & RESTAURANT - LIVE ORDER TRACKING SCREEN (CONSUMER GRADE)
+   Mobile-First, Responsive & Leaflet-Optimized
+   ========================================================================== */
+
+/* Fullscreen Modal Backdrop */
+.jonak-tracker-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: rgba(3, 8, 16, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  color: #FFFFFF;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Modal Shell */
+.jonak-tracker-shell {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  background: #090E17;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Desktop Modal Sizing (> 1024px) */
+@media (min-width: 1024px) {
+  .jonak-tracker-overlay {
+    padding: 1.5rem;
+  }
+  .jonak-tracker-shell {
+    max-width: 1200px;
+    height: 92vh;
+    max-height: 900px;
+    border-radius: 20px;
+    border: 1px solid rgba(212, 175, 55, 0.25);
+    box-shadow: 0 25px 70px rgba(0, 0, 0, 0.8), 0 0 40px rgba(0, 56, 56, 0.4);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   1. TOP NAVIGATION BAR
+   -------------------------------------------------------------------------- */
+.jonak-tracker-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1.25rem;
+  background: rgba(9, 14, 23, 0.95);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.jonak-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.jonak-topbar-back-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #E2E8F0;
+  cursor: pointer;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+.jonak-topbar-back-btn:hover {
+  background: rgba(212, 175, 55, 0.15);
+  border-color: #D4AF37;
+  color: #D4AF37;
+  transform: translateX(-2px);
+}
+
+.jonak-topbar-meta h2 {
+  font-size: 0.98rem;
+  font-weight: 800;
+  margin: 0;
+  color: #FFFFFF;
+  letter-spacing: -0.01em;
+}
+
+.jonak-topbar-meta p {
+  font-size: 0.74rem;
+  color: #94A3B8;
+  margin: 0.15rem 0 0;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.jonak-topbar-order-pill {
+  background: rgba(212, 175, 55, 0.14);
+  color: #F5C542;
+  font-weight: 700;
+  font-size: 0.7rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+.jonak-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.jonak-help-pill {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #E2E8F0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.4rem 0.85rem;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+.jonak-help-pill:hover {
+  background: #003838;
+  border-color: #10B981;
+  color: #FFFFFF;
+}
+
+.jonak-topbar-close-btn {
+  background: transparent;
+  border: none;
+  color: #94A3B8;
+  cursor: pointer;
+  padding: 0.35rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+.jonak-topbar-close-btn:hover {
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* --------------------------------------------------------------------------
+   2. MAIN BODY: SPLIT VIEW (DESKTOP) & STACKED VIEW (MOBILE)
+   -------------------------------------------------------------------------- */
+.jonak-tracker-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  height: calc(100% - 60px);
+}
+
+@media (min-width: 900px) {
+  .jonak-tracker-body {
+    flex-direction: row;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   3. MAP VIEW CONTAINER (EXPLICIT SIZING, NEVER BLANK)
+   -------------------------------------------------------------------------- */
+.jonak-map-wrapper {
+  position: relative;
+  width: 100%;
+  height: 46%; /* Mobile default */
+  min-height: 280px;
+  background: #0D1420;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+@media (min-width: 900px) {
+  .jonak-map-wrapper {
+    width: 58%;
+    height: 100%;
+    min-height: 100%;
+  }
+}
+
+.jonak-map-canvas {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  background: #090E17;
+}
+
+/* Floating Status Pills on Map */
+.jonak-map-floating-pill {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 800;
+  background: rgba(9, 14, 23, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  border-radius: 10px;
+  padding: 0.5rem 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+}
+
+.jonak-live-indicator-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10B981;
+  box-shadow: 0 0 10px #10B981;
+  animation: jonakPulseDot 1.6s infinite ease-in-out;
+}
+
+@keyframes jonakPulseDot {
+  0% { transform: scale(0.9); opacity: 0.7; }
+  50% { transform: scale(1.3); opacity: 1; }
+  100% { transform: scale(0.9); opacity: 0.7; }
+}
+
+.jonak-floating-pill-title {
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: #FFFFFF;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.jonak-floating-pill-sub {
+  font-size: 0.68rem;
+  color: #94A3B8;
+}
+
+/* Map Simulation Controls */
+.jonak-map-sim-controls {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  z-index: 800;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.jonak-sim-btn {
+  background: rgba(9, 14, 23, 0.9);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #E2E8F0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.35rem 0.65rem;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all 0.2s;
+}
+.jonak-sim-btn:hover {
+  background: rgba(212, 175, 55, 0.2);
+  border-color: #D4AF37;
+  color: #FFFFFF;
+}
+.jonak-sim-btn.active {
+  background: #10B981;
+  border-color: #10B981;
+  color: #070B14;
+}
+
+/* Center Map Reset Button */
+.jonak-recenter-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 800;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(9, 14, 23, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+  transition: all 0.2s;
+}
+.jonak-recenter-btn:hover {
+  background: #003838;
+  border-color: #10B981;
+  transform: rotate(45deg);
+}
+
+/* --------------------------------------------------------------------------
+   4. BOTTOM SHEET & SCROLLABLE CONTENT PANEL
+   -------------------------------------------------------------------------- */
+.jonak-details-panel {
+  flex: 1;
+  background: #0B111D;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 1rem 1.25rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (min-width: 900px) {
+  .jonak-details-panel {
+    width: 42%;
+    border-top: none;
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 1.5rem 1.75rem 2.5rem;
+  }
+}
+
+/* Drag handle on mobile */
+.jonak-sheet-handle {
+  width: 38px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  margin: -0.3rem auto 0.5rem;
+  display: block;
+}
+
+@media (min-width: 900px) {
+  .jonak-sheet-handle {
+    display: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   5. LIVE ETA & PROGRESS BANNER
+   -------------------------------------------------------------------------- */
+.jonak-eta-card {
+  background: linear-gradient(135deg, rgba(0, 56, 56, 0.4) 0%, rgba(9, 14, 23, 0.9) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 14px;
+  padding: 1rem 1.15rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.jonak-eta-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.65rem;
+}
+
+.jonak-eta-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(16, 185, 129, 0.15);
+  color: #34D399;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.2rem 0.55rem;
+  border-radius: 20px;
+}
+
+.jonak-eta-countdown {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+.jonak-eta-time-val {
+  font-size: 1.45rem;
+  font-weight: 900;
+  color: #FFFFFF;
+  letter-spacing: -0.02em;
+}
+.jonak-eta-time-lbl {
+  font-size: 0.8rem;
+  color: #94A3B8;
+  font-weight: 600;
+}
+
+.jonak-status-headline {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #FFFFFF;
+  margin: 0 0 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.jonak-status-subtext {
+  font-size: 0.8rem;
+  color: #94A3B8;
+  margin: 0 0 0.85rem;
+  line-height: 1.35;
+}
+
+/* Multi-stage Progress Track */
+.jonak-progress-bar-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+  margin-bottom: 0.85rem;
+}
+
+.jonak-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #D4AF37 0%, #10B981 100%);
+  border-radius: 3px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
+}
+
+/* 4 Milestone Stepper */
+.jonak-stepper-row {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+  margin-top: 0.4rem;
+}
+
+.jonak-step-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  text-align: center;
+  gap: 0.3rem;
+}
+
+.jonak-step-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  color: #94A3B8;
+  transition: all 0.3s;
+}
+.jonak-step-node.completed .jonak-step-dot {
+  background: #10B981;
+  border-color: #10B981;
+  color: #070B14;
+}
+.jonak-step-node.current .jonak-step-dot {
+  background: #090E17;
+  border-color: #D4AF37;
+  color: #D4AF37;
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.8);
+}
+
+.jonak-step-label {
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: #64748B;
+  line-height: 1.15;
+}
+.jonak-step-node.completed .jonak-step-label {
+  color: #10B981;
+}
+.jonak-step-node.current .jonak-step-label {
+  color: #FFFFFF;
+  font-weight: 800;
+}
+
+/* --------------------------------------------------------------------------
+   6. DELIVERY CAPTAIN PROFILE CARD
+   -------------------------------------------------------------------------- */
+.jonak-captain-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 1rem 1.1rem;
+}
+
+.jonak-captain-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.85rem;
+}
+
+.jonak-captain-bio {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.jonak-captain-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #003838 0%, #004D4D 100%);
+  border: 2px solid #D4AF37;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  position: relative;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.jonak-captain-verified-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  background: #10B981;
+  color: #070B14;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #090E17;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.jonak-captain-name {
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: #FFFFFF;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.jonak-captain-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  background: #10B981;
+  color: #070B14;
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+}
+
+.jonak-captain-stats {
+  font-size: 0.74rem;
+  color: #94A3B8;
+  margin: 0.2rem 0 0;
+}
+
+.jonak-captain-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.jonak-captain-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+.jonak-captain-btn:hover {
+  background: #003838;
+  border-color: #10B981;
+  color: #10B981;
+  transform: translateY(-2px);
+}
+.jonak-captain-btn.call {
+  background: #10B981;
+  color: #070B14;
+  border: none;
+}
+.jonak-captain-btn.call:hover {
+  background: #059669;
+  color: #FFFFFF;
+}
+
+/* Safety badge */
+.jonak-safety-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  color: #34D399;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.4rem 0.65rem;
+  border-radius: 6px;
+  margin-top: 0.65rem;
+}
+
+/* Quick Tips Selector */
+.jonak-tip-section {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.jonak-tip-label {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #CBD5E1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.jonak-tip-chips {
+  display: flex;
+  gap: 0.45rem;
+}
+
+.jonak-tip-chip {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #E2E8F0;
+  padding: 0.35rem 0.5rem;
+  border-radius: 8px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s;
+}
+.jonak-tip-chip:hover {
+  border-color: #D4AF37;
+  color: #F5C542;
+}
+.jonak-tip-chip.active {
+  background: rgba(212, 175, 55, 0.18);
+  border-color: #D4AF37;
+  color: #F5C542;
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+}
+
+/* --------------------------------------------------------------------------
+   7. OTP & DELIVERY INSTRUCTIONS
+   -------------------------------------------------------------------------- */
+.jonak-otp-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(212, 175, 55, 0.08);
+  border: 1px dashed rgba(212, 175, 55, 0.4);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+}
+
+.jonak-otp-left {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.jonak-otp-icon-wrap {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(212, 175, 55, 0.15);
+  border: 1px solid #D4AF37;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #F5C542;
+}
+
+.jonak-otp-title {
+  font-size: 0.74rem;
+  color: #94A3B8;
+  margin: 0;
+}
+.jonak-otp-sub {
+  font-size: 0.7rem;
+  color: #CBD5E1;
+}
+
+.jonak-otp-code-box {
+  background: #090E17;
+  border: 1.5px solid #D4AF37;
+  border-radius: 8px;
+  padding: 0.35rem 0.75rem;
+  font-family: monospace;
+  font-size: 1.15rem;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  color: #F5C542;
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+}
+
+/* Safety Instruction & Leave at door */
+.jonak-address-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+}
+
+.jonak-address-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  margin-bottom: 0.65rem;
+}
+
+.jonak-address-text strong {
+  font-size: 0.82rem;
+  color: #FFFFFF;
+  display: block;
+}
+.jonak-address-text span {
+  font-size: 0.74rem;
+  color: #94A3B8;
+  display: block;
+  margin-top: 0.15rem;
+}
+
+.jonak-door-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.65rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.76rem;
+  color: #E2E8F0;
+  cursor: pointer;
+}
+
+/* Custom Switch */
+.jonak-switch {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+}
+.jonak-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.jonak-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: rgba(255, 255, 255, 0.15);
+  transition: .3s;
+  border-radius: 20px;
+}
+.jonak-slider:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .3s;
+  border-radius: 50%;
+}
+.jonak-switch input:checked + .jonak-slider {
+  background-color: #10B981;
+}
+.jonak-switch input:checked + .jonak-slider:before {
+  transform: translateX(16px);
+}
+
+/* --------------------------------------------------------------------------
+   8. ORDER SUMMARY ACCORDION
+   -------------------------------------------------------------------------- */
+.jonak-order-accordion {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.jonak-accordion-header {
+  padding: 0.85rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s;
+}
+.jonak-accordion-header:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.jonak-accordion-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.jonak-accordion-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+.jonak-accordion-badge {
+  font-size: 0.7rem;
+  color: #94A3B8;
+}
+
+.jonak-accordion-content {
+  padding: 0 1rem 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.jonak-order-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.55rem 0;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
+  font-size: 0.8rem;
+}
+.jonak-order-item-left {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.jonak-veg-dot {
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid #10B981;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.jonak-veg-dot:after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  background: #10B981;
+  border-radius: 50%;
+}
+.jonak-nonveg-dot {
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid #EF4444;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.jonak-nonveg-dot:after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  background: #EF4444;
+  border-radius: 50%;
+}
+
+.jonak-bill-summary {
+  margin-top: 0.75rem;
+  padding-top: 0.5rem;
+}
+.jonak-bill-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.76rem;
+  color: #94A3B8;
+  margin-bottom: 0.35rem;
+}
+.jonak-bill-row.total {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #FFFFFF;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.jonak-paid-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: #10B981;
+  font-weight: 700;
+  font-size: 0.72rem;
+}
+
+/* --------------------------------------------------------------------------
+   9. CUSTOM LEAFLET MAP MARKER STYLES
+   -------------------------------------------------------------------------- */
+.jonak-map-marker-restaurant {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #003838;
+  border: 2.5px solid #D4AF37;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 20px rgba(212, 175, 55, 0.8), 0 4px 12px rgba(0, 0, 0, 0.6);
+  position: relative;
+}
+
+.jonak-map-marker-dest {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #1E293B;
+  border: 2.5px solid #10B981;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.8), 0 4px 12px rgba(0, 0, 0, 0.6);
+  position: relative;
+}
+
+.jonak-map-marker-bike {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: #10B981;
+  border: 2.5px solid #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 22px rgba(16, 185, 129, 0.95), 0 6px 16px rgba(0, 0, 0, 0.7);
+  transition: transform 0.4s ease-out;
+}
+
+/* Radar Pulse Rings */
+.jonak-pulse-ring {
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 2px solid #D4AF37;
+  animation: jonakRadarPing 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+  opacity: 0.8;
+  pointer-events: none;
+}
+.jonak-pulse-ring-dest {
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 2px solid #10B981;
+  animation: jonakRadarPing 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+@keyframes jonakRadarPing {
+  0% { transform: scale(1); opacity: 0.9; }
+  80%, 100% { transform: scale(2.2); opacity: 0; }
+}
